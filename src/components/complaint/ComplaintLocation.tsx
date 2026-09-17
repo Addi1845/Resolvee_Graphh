@@ -48,7 +48,16 @@ export function ComplaintLocation({
       <MapPanel
         title={heading ?? t("app.map.single")}
         height={height}
-        points={[{ id: `${lat}-${lng}`, lat, lng, title, subtitle, band: band ?? null }]}
+        points={[
+          {
+            id: `${lat}-${lng}`,
+            lat,
+            lng,
+            title,
+            band: band ?? null,
+            ...(subtitle ? { subtitle } : {}),
+          },
+        ]}
       />
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
