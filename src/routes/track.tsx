@@ -156,6 +156,34 @@ function TrackPage() {
             </div>
           </dl>
 
+          {result?.found && result.photos.length > 0 ? (
+            <div className="mt-6">
+              <h3 className="text-lg font-bold text-primary">{t("app.media.title")}</h3>
+              <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {result.photos.map((photo) => (
+                  <li key={photo.id}>
+                    <img
+                      src={photo.url}
+                      alt=""
+                      className="h-32 w-full rounded-sm border border-border object-cover"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="mt-6 rounded-sm border border-border bg-muted/40 p-4 text-sm">
+            <p className="font-semibold text-foreground">{t("app.analysis.demoLabel")}</p>
+            <p className="mt-1 text-muted-foreground">
+              {t("app.analysis.priority")}:{" "}
+              {complaint.priority_band
+                ? `${t(`app.analysis.bands.${complaint.priority_band}`)} · ${complaint.priority_score ?? "—"}/100`
+                : "—"}
+            </p>
+            <p className="mt-1 text-muted-foreground">{t("app.analysis.needsReview")}</p>
+          </div>
+
           {complaint.resolution_note ? (
             <div className="mt-6 rounded-sm border border-success/40 bg-success-soft p-4">
               <p className="text-sm font-semibold text-success-foreground">
