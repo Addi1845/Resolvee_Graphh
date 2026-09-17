@@ -3,10 +3,12 @@ import { getRequestHeader } from "@tanstack/react-start/server";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  DUPLICATE_POLICY,
   LOCATION_POLICY,
   MEDIA_POLICY,
   assessPriority,
   evaluateProximity,
+  scoreDuplicate,
   suggestCategory,
   type DeviceObservation,
 } from "@/lib/policy";
@@ -35,6 +37,7 @@ export const STATUSES = [
 export type PhotoInput = {
   dataUrl: string;
   mime: string;
+  kind?: "photo" | "video";
   source: "in_app_capture" | "gallery_upload" | "unknown";
 };
 
@@ -69,17 +72,22 @@ function generateTrackingCode(): string {
   return `RG-${new Date().getFullYear()}-${suffix}`;
 }
 
-function decodeDataUrl(dataUrl: string): { mime: string; bytes: Uint8Array } | null {
+function decodeDataUrl(
+  dataUrl: string,
+): { mime: string; bytes: Uint8Array; kind: "photo" | "video" } | null {
   const match = /^data:([^;,]+);base64,(.+)$/.exec(dataUrl);
   if (!match) return null;
   const mime = match[1]!;
-  if (!(MEDIA_POLICY.acceptedMime as readonly string[]).includes(mime)) return null;
+  const isPhoto = (MEDIA_POLICY.acceptedMime as readonly string[]).includes(mime);
+  const isVideo = (MEDIA_POLICY.acceptedVideoMime as readonly string[]).includes(mime);
+  if (!isPhoto && !isVideo) return null;
   try {
     const binary = atob(match[2]!);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    if (bytes.byteLength > MEDIA_POLICY.maxPhotoBytes) return null;
-    return { mime, bytes };
+    const limit = isVideo ? MEDIA_POLICY.maxVideoBytes : MEDIA_POLICY.maxPhotoBytes;
+    if (bytes.byteLength > limit) return null;
+    return { mime, bytes, kind: isVideo ? "video" : "photo" };
   } catch {
     return null;
   }
@@ -125,6 +133,70 @@ async function requireStaff(context: AuthedContext): Promise<string[]> {
   return staff;
 }
 
+/**
+ * Compare a new report with recent ones and store suggested duplicate links.
+ * Suggestions only: two reports are never merged without an officer's decision.
+ */
+async function suggestDuplicates(input: {
+  id: string;
+  category: string;
+  text: string;
+  lat: number | null;
+  lng: number | null;
+}): Promise<{ trackingCode: string; score: number; reasons: string[] }[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const since = new Date(Date.now() - DUPLICATE_POLICY.windowDays * 86_400_000).toISOString();
+
+  const { data: recent } = await supabaseAdmin
+    .from("complaints")
+    .select("id, tracking_code, category, title, description, location_text, issue_lat, issue_lng")
+    .eq("category", input.category)
+    .neq("id", input.id)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(60);
+
+  const matches: { trackingCode: string; score: number; reasons: string[] }[] = [];
+  const rows: {
+    complaint_id: string;
+    related_complaint_id: string;
+    similarity: number;
+    reason: string;
+    state: string;
+    source: string;
+  }[] = [];
+
+  for (const candidate of recent ?? []) {
+    const { score, reasons } = scoreDuplicate(
+      { category: input.category, text: input.text, lat: input.lat, lng: input.lng },
+      {
+        category: candidate.category,
+        text: `${candidate.title} ${candidate.description} ${candidate.location_text}`,
+        lat: candidate.issue_lat,
+        lng: candidate.issue_lng,
+      },
+    );
+    if (score < DUPLICATE_POLICY.minScore) continue;
+    matches.push({ trackingCode: candidate.tracking_code, score, reasons });
+    rows.push({
+      complaint_id: input.id,
+      related_complaint_id: candidate.id,
+      similarity: score,
+      reason: reasons.join("; "),
+      state: "suggested",
+      source: "rule_based_demo",
+    });
+  }
+
+  if (rows.length > 0) {
+    const { error } = await supabaseAdmin
+      .from("complaint_duplicates")
+      .insert(rows.slice(0, 5) as never);
+    if (error) console.error("duplicate suggestion insert failed", error.message);
+  }
+
+  return matches.sort((a, b) => b.score - a.score).slice(0, 5);
+}
 
 
 export const submitComplaint = createServerFn({ method: "POST" })
@@ -137,8 +209,15 @@ export const submitComplaint = createServerFn({ method: "POST" })
     if (locationText.length < 3) throw new Error("LOCATION_REQUIRED");
 
     // Photo evidence is mandatory: every complaint must carry at least one image.
-    const photos = (input.photos ?? []).slice(0, MEDIA_POLICY.maxPhotos);
-    if (photos.length === 0) throw new Error("PHOTO_REQUIRED");
+    const incoming = input.photos ?? [];
+    const images = incoming
+      .filter((item) => item.kind !== "video")
+      .slice(0, MEDIA_POLICY.maxPhotos);
+    const videos = incoming
+      .filter((item) => item.kind === "video")
+      .slice(0, MEDIA_POLICY.maxVideos);
+    const photos = [...images, ...videos];
+    if (images.length === 0) throw new Error("PHOTO_REQUIRED");
 
 
     const device = input.device
@@ -182,7 +261,11 @@ export const submitComplaint = createServerFn({ method: "POST" })
     // photos, and the routing policy turns its category codes into departments.
     const triage = await triageComplaint({
       text: analysisText,
-      photoDataUrls: data.photos.map((photo) => photo.dataUrl),
+      // Only still images are sent for analysis; video clips are stored as
+      // evidence for officers and are not read by the model.
+      photoDataUrls: data.photos
+        .filter((photo) => photo.kind !== "video")
+        .map((photo) => photo.dataUrl),
     });
 
     const routed = resolveDepartments(triage.category, triage.supportingCategories);
@@ -296,7 +379,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
             storage_key: key,
             mime_type: decoded.mime,
             byte_size: decoded.bytes.byteLength,
-            kind: "photo",
+            kind: decoded.kind,
             source: ["in_app_capture", "gallery_upload"].includes(photo.source)
               ? photo.source
               : "unknown",
@@ -304,7 +387,18 @@ export const submitComplaint = createServerFn({ method: "POST" })
           stored += 1;
         }
 
+        // Suggest possible duplicates of recent nearby reports. Nothing is
+        // merged: an officer confirms or rejects every suggested link.
+        const duplicates = await suggestDuplicates({
+          id: row.id,
+          category: triage.category,
+          text: `${data.title} ${data.description} ${data.locationText}`,
+          lat: data.issueLat,
+          lng: data.issueLng,
+        });
+
         return {
+          duplicateSuggestions: duplicates,
           trackingCode: row.tracking_code,
           createdAt: row.created_at,
           photosStored: stored,
@@ -331,16 +425,24 @@ async function signedPhotoUrls(complaintId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: rows } = await supabaseAdmin
     .from("attachments")
-    .select("id, storage_key, mime_type, source, created_at")
+    .select("id, storage_key, mime_type, kind, source, created_at")
     .eq("complaint_id", complaintId)
     .order("created_at", { ascending: true });
 
-  const photos: { id: string; url: string; source: string }[] = [];
+  const photos: { id: string; url: string; source: string; kind: string; mime: string }[] = [];
   for (const row of rows ?? []) {
     const { data: signed } = await supabaseAdmin.storage
       .from("complaint-media")
       .createSignedUrl(row.storage_key, 60 * 60);
-    if (signed?.signedUrl) photos.push({ id: row.id, url: signed.signedUrl, source: row.source });
+    if (signed?.signedUrl) {
+      photos.push({
+        id: row.id,
+        url: signed.signedUrl,
+        source: row.source,
+        kind: row.kind,
+        mime: row.mime_type,
+      });
+    }
   }
   return photos;
 }
@@ -586,4 +688,125 @@ export const updateComplaintStatus = createServerFn({ method: "POST" })
     if (logError) console.error("complaint_updates insert failed", logError.message);
 
     return { ok: true };
+  });
+
+/**
+ * Duplicate review queue. Every link is a suggestion waiting for an officer:
+ * confirming one never closes a complaint by itself.
+ */
+export const listDuplicateReview = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireStaff(context);
+    const { data, error } = await context.supabase
+      .from("complaint_duplicates")
+      .select(
+        "id, similarity, reason, state, created_at, complaint:complaints!complaint_duplicates_complaint_id_fkey(tracking_code, title, location_text, created_at), related:complaints!complaint_duplicates_related_complaint_id_fkey(tracking_code, title, location_text, created_at)",
+      )
+      .order("similarity", { ascending: false })
+      .limit(50);
+    if (error) {
+      console.error("listDuplicateReview failed", error.message);
+      throw new Error("LIST_FAILED");
+    }
+    return {
+      links: data ?? [],
+      policyVersion: DUPLICATE_POLICY.version,
+    };
+  });
+
+export const reviewDuplicateLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; state: string }) => ({
+    id: str(input.id, 40),
+    state: ["confirmed", "rejected"].includes(input.state) ? input.state : "suggested",
+  }))
+  .handler(async ({ data, context }) => {
+    const staffRoles = await requireStaff(context);
+    if (!staffRoles.some((role) => role !== "auditor")) throw new Error("READ_ONLY_ROLE");
+    const { error } = await context.supabase
+      .from("complaint_duplicates")
+      .update({
+        state: data.state,
+        reviewed_by: context.userId,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", data.id);
+    if (error) {
+      console.error("reviewDuplicateLink failed", error.message);
+      throw new Error("UPDATE_FAILED");
+    }
+    return { ok: true };
+  });
+
+/** Closure verification: a person checks the evidence before a complaint closes. */
+export const listVerificationQueue = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireStaff(context);
+    const { data, error } = await context.supabase
+      .from("complaints")
+      .select("id, tracking_code, title, category, location_text, due_date, updated_at")
+      .eq("status", "awaiting_verification")
+      .order("updated_at", { ascending: true })
+      .limit(50);
+    if (error) {
+      console.error("listVerificationQueue failed", error.message);
+      throw new Error("LIST_FAILED");
+    }
+
+    const { data: decisions } = await context.supabase
+      .from("complaint_verifications")
+      .select("complaint_id, decision, note, reviewer_name, created_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    return { pending: data ?? [], recent: decisions ?? [] };
+  });
+
+export const recordVerification = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; decision: string; note?: string }) => ({
+    id: str(input.id, 40),
+    decision: input.decision === "rework" ? "rework" : "verified",
+    note: str(input.note, 1000),
+  }))
+  .handler(async ({ data, context }) => {
+    const staffRoles = await requireStaff(context);
+    if (!staffRoles.some((role) => role !== "auditor")) throw new Error("READ_ONLY_ROLE");
+
+    const { error } = await context.supabase.from("complaint_verifications").insert({
+      complaint_id: data.id,
+      decision: data.decision,
+      note: data.note || null,
+      reviewer_id: context.userId,
+    });
+    if (error) {
+      console.error("recordVerification failed", error.message);
+      throw new Error("UPDATE_FAILED");
+    }
+
+    // A verified closure resolves the complaint; rework sends it back to the
+    // department instead of closing it.
+    const nextStatus = data.decision === "verified" ? "resolved" : "in_progress";
+    await context.supabase
+      .from("complaints")
+      .update({
+        status: nextStatus,
+        updated_at: new Date().toISOString(),
+        ...(data.decision === "verified" && data.note ? { resolution_note: data.note } : {}),
+      })
+      .eq("id", data.id);
+
+    await context.supabase.from("complaint_updates").insert({
+      complaint_id: data.id,
+      status: nextStatus,
+      note:
+        data.decision === "verified"
+          ? `Closure evidence verified. ${data.note}`.trim()
+          : `Closure evidence sent back for rework. ${data.note}`.trim(),
+      created_by: context.userId,
+    });
+
+    return { ok: true, status: nextStatus };
   });

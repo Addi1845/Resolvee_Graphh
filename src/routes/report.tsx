@@ -102,8 +102,8 @@ function ReportPage() {
     if (current === "locate" && draft.location.locationText.trim().length < 3) {
       return t("app.report.errLocation");
     }
-    // Photo evidence is mandatory for every complaint.
-    if (current === "attach" && photos.length === 0) {
+    // Photo evidence is mandatory for every complaint; video is optional.
+    if (current === "attach" && photos.every((item) => item.kind === "video")) {
       return t("app.media.required");
     }
     return null;
@@ -146,7 +146,8 @@ function ReportPage() {
           device: draft.location.device,
           photos: photos.map((photo) => ({
             dataUrl: photo.dataUrl,
-            mime: "image/jpeg",
+            mime: photo.mime,
+            kind: photo.kind,
             source: photo.source,
           })),
         },

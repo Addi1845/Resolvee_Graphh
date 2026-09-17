@@ -106,6 +106,60 @@ export type Database = {
           },
         ]
       }
+      complaint_duplicates: {
+        Row: {
+          complaint_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          related_complaint_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          similarity: number
+          source: string
+          state: string
+        }
+        Insert: {
+          complaint_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          related_complaint_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similarity?: number
+          source?: string
+          state?: string
+        }
+        Update: {
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          related_complaint_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similarity?: number
+          source?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_duplicates_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaint_duplicates_related_complaint_id_fkey"
+            columns: ["related_complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaint_updates: {
         Row: {
           actor_name: string | null
@@ -137,6 +191,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "complaint_updates_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      complaint_verifications: {
+        Row: {
+          complaint_id: string
+          created_at: string
+          decision: string
+          id: string
+          note: string | null
+          reviewer_id: string | null
+          reviewer_name: string | null
+        }
+        Insert: {
+          complaint_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          note?: string | null
+          reviewer_id?: string | null
+          reviewer_name?: string | null
+        }
+        Update: {
+          complaint_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          note?: string | null
+          reviewer_id?: string | null
+          reviewer_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_verifications_complaint_id_fkey"
             columns: ["complaint_id"]
             isOneToOne: false
             referencedRelation: "complaints"
