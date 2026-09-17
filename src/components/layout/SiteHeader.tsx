@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, LogIn, LogOut, Menu, Network, X } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, Menu, X } from "lucide-react";
+
+import logoUrl from "@/assets/resolvegraph-logo.png";
 
 import { AccessibilityControls } from "./AccessibilityControls";
 import { LanguageSelector } from "./LanguageSelector";
@@ -64,8 +66,15 @@ export function SiteHeader() {
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
         <Link to="/" className="flex items-center gap-3 rounded-sm">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-sm bg-primary-foreground/12 ring-1 ring-primary-foreground/25">
-            <Network aria-hidden="true" className="size-6" />
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary-foreground">
+            <img
+              src={logoUrl}
+              alt=""
+              aria-hidden="true"
+              width={1024}
+              height={1024}
+              className="size-10 object-contain"
+            />
           </span>
           <span className="flex flex-col leading-tight">
             <span className="text-lg font-bold tracking-tight sm:text-xl">{t("brand.name")}</span>
