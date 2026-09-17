@@ -39,7 +39,6 @@ type Step = (typeof STEPS)[number];
 const DRAFT_KEY = "resolvegraph.report.draft";
 
 type Draft = {
-  category: string;
   title: string;
   description: string;
   reporterName: string;
@@ -48,7 +47,6 @@ type Draft = {
 };
 
 const emptyDraft: Draft = {
-  category: "water",
   title: "",
   description: "",
   reporterName: "",
