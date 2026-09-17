@@ -98,14 +98,15 @@ export const submitComplaint = createServerFn({ method: "POST" })
           department_id: dept?.id ?? null,
           due_date: due.toISOString().slice(0, 10),
         })
-        .select("tracking_code, created_at")
+        .select("id, tracking_code, created_at")
         .single();
 
       if (!error && row) {
         await supabaseAdmin.from("complaint_updates").insert({
-          complaint_id: undefined as never,
+          complaint_id: row.id,
           status: "submitted",
-        } as never);
+          note: "Complaint received through the citizen portal.",
+        });
         return { trackingCode: row.tracking_code, createdAt: row.created_at };
       }
       if (error && !error.message.includes("duplicate")) {
@@ -196,12 +197,12 @@ export const updateComplaintStatus = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {
+    const patch = {
       status: data.status,
       updated_at: new Date().toISOString(),
+      ...(data.priority ? { priority: data.priority } : {}),
+      ...(data.status === "resolved" && data.note ? { resolution_note: data.note } : {}),
     };
-    if (data.priority) patch['priority'] = data.priority;
-    if (data.status === "resolved" && data.note) patch['resolution_note'] = data.note;
 
     const { error } = await context.supabase.from("complaints").update(patch).eq("id", data.id);
     if (error) {
