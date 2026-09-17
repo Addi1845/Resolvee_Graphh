@@ -129,14 +129,35 @@ export function SiteHeader() {
             </li>
           ))}
           <li className="md:hidden">
-            <Link
-              to="/login"
-              onClick={() => setMenuOpen(false)}
-              className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
-            >
-              <LogIn aria-hidden="true" className="size-4" />
-              {t("nav.login")}
-            </Link>
+            {session ? (
+              <div className="flex flex-col">
+                <Link
+                  to="/dashboard"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
+                >
+                  <LayoutDashboard aria-hidden="true" className="size-4" />
+                  {t("app.auth.dashboard")}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void handleSignOut()}
+                  className="flex min-h-12 items-center gap-2 px-3 text-left text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
+                >
+                  <LogOut aria-hidden="true" className="size-4" />
+                  {t("app.auth.signOut")}
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/auth"
+                onClick={() => setMenuOpen(false)}
+                className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
+              >
+                <LogIn aria-hidden="true" className="size-4" />
+                {t("nav.login")}
+              </Link>
+            )}
           </li>
         </ul>
       </nav>
