@@ -312,6 +312,13 @@ export const en = {
         "You do not choose a department. Describe the problem and add photos — the assistant reads them and works out which services are responsible.",
       pending: "Decided automatically after you submit",
       analysing: "Reading your photos…",
+      working: "AI assistant is analysing your report",
+      workingHint:
+        "This usually takes 10–20 seconds. Please don't close or refresh this page.",
+      stageSaving: "Saving your report and photos",
+      stageAnalysing: "Reading your photos and description with AI",
+      stageRouting: "Matching the responsible departments",
+      stageFinishing: "Preparing your tracking code",
       resultTitle: "Who will handle this",
       detected: "Problem type identified",
       departments: "Responsible services",
