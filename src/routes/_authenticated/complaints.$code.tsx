@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Copy, Printer } from "lucide-react";
 
 import { useI18n } from "@/i18n";
-import { MapPanel } from "@/components/map/MapPanel";
+import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
 import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
 import { getComplaintDetail } from "@/lib/complaints.functions";
 
