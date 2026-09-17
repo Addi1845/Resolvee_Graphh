@@ -322,6 +322,16 @@ function ReportPage() {
                 rows={6}
                 className={fieldClass}
               />
+              <VoiceInput
+                onText={(text) =>
+                  setDraft((current) => ({
+                    ...current,
+                    description: current.description.trim()
+                      ? `${current.description.trim()}\n${text}`
+                      : text,
+                  }))
+                }
+              />
             </div>
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
