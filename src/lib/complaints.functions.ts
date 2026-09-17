@@ -369,9 +369,22 @@ export const trackComplaint = createServerFn({ method: "POST" })
       .eq("complaint_id", complaint.id)
       .order("created_at", { ascending: true });
 
+    const { data: routed } = await supabaseAdmin
+      .from("complaint_departments")
+      .select("role, reason, departments(code, name_en, name_hi, name_mr)")
+      .eq("complaint_id", complaint.id);
+
     const photos = await signedPhotoUrls(complaint.id);
     const { id: _id, ...safe } = complaint;
-    return { found: true as const, complaint: safe, updates: updates ?? [], photos };
+    return {
+      found: true as const,
+      complaint: safe,
+      updates: updates ?? [],
+      photos,
+      routedDepartments: (routed ?? []).sort((a, b) =>
+        a.role === b.role ? 0 : a.role === "primary" ? -1 : 1,
+      ),
+    };
   });
 
 export const listMyComplaints = createServerFn({ method: "POST" })
