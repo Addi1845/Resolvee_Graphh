@@ -9,9 +9,8 @@ import { trackComplaint } from "@/lib/complaints.functions";
 type TrackResult = Awaited<ReturnType<typeof trackComplaint>>;
 
 export const Route = createFileRoute("/track")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    code: typeof search['code'] === "string" ? search['code'] : "",
-  }),
+  validateSearch: (search: Record<string, unknown>): { code?: string } =>
+    typeof search['code'] === "string" && search['code'] ? { code: search['code'] } : {},
   head: () => ({
     meta: [
       { title: "Track a Complaint — ResolveGraph AI" },
