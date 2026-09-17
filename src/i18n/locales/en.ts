@@ -429,7 +429,7 @@ export const en = {
       workloadTitle: "Resolution graph by department",
       workloadIntro: "Open, overdue and closed work for each department, counted from live complaints.",
     },
-    report: {
+    reportView: {
       title: "Complaint report",
       summary: "Summary",
       details: "Report details",
