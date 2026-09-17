@@ -443,6 +443,12 @@ function ReportPage() {
           </p>
         ) : null}
 
+        {busy ? (
+          <div className="pt-2">
+            <AiAnalysisStatus />
+          </div>
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-3 pt-2">
           {index > 0 ? (
             <button
