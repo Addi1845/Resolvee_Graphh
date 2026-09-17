@@ -1125,7 +1125,23 @@ export const getComplaintDetail = createServerFn({ method: "POST" })
       routedDepartments: (routed ?? []).sort((a: { role: string }, b: { role: string }) =>
         a.role === b.role ? 0 : a.role === "primary" ? -1 : 1,
       ),
-      duplicates: duplicates ?? [],
+      duplicates: (duplicates ?? []).map(
+        (link: {
+          id: string;
+          similarity: number;
+          reason: string | null;
+          state: string;
+          complaint_id: string;
+          related: { tracking_code: string; title: string } | null;
+          source_complaint: { tracking_code: string; title: string } | null;
+        }) => ({
+          id: link.id,
+          similarity: link.similarity,
+          reason: link.reason,
+          state: link.state,
+          related: link.complaint_id === complaint.id ? link.related : link.source_complaint,
+        }),
+      ),
       verifications: verifications ?? [],
       photos: await signedPhotoUrls(complaint.id),
     };
