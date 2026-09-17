@@ -127,7 +127,8 @@ export function SiteHeader() {
             ) : (
               <Menu aria-hidden="true" className="size-5" />
             )}
-            <span>{menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}</span>
+            <span className="hidden sm:inline">{menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}</span>
+            <span className="sr-only sm:hidden">{menuOpen ? t("nav.closeMenu") : t("nav.openMenu")}</span>
           </button>
         </div>
       </div>
