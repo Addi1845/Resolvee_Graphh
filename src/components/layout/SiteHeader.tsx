@@ -54,10 +54,7 @@ export function SiteHeader() {
   return (
     <header className="bg-primary text-primary-foreground">
       <div className="border-b border-primary-foreground/15">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-1.5 text-xs">
-          <p className="rounded-sm bg-primary-foreground/10 px-2 py-1 font-medium">
-            {t("brand.prototypeBadge")}
-          </p>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-end gap-2 px-4 py-1.5 text-xs">
           <div className="flex flex-wrap items-center gap-2">
             <LanguageSelector />
             <AccessibilityControls />
