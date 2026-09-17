@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { LogIn } from "lucide-react";
 
 import { useI18n } from "@/i18n";
@@ -10,14 +10,16 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Officer Login — ResolveGraph AI" },
+      { title: "Citizen Login — ResolveGraph AI" },
       {
         name: "description",
         content:
-          "Sign in for intake officers, field officers, supervisors, administrators and auditors of ResolveGraph AI.",
+          "Citizens sign in to follow their ResolveGraph AI complaints. Reporting works without an account too.",
       },
-      { property: "og:title", content: "Officer Login — ResolveGraph AI" },
-      { property: "og:description", content: "Staff sign-in for ResolveGraph AI." },
+      { property: "og:title", content: "Citizen Login — ResolveGraph AI" },
+      { property: "og:description", content: "Citizen sign-in for ResolveGraph AI." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: AuthPage,
@@ -38,7 +40,7 @@ function AuthPage() {
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void navigate({ to: "/dashboard", replace: true });
+      if (data.session) void navigate({ to: "/my-complaints", replace: true });
     });
   }, [navigate]);
 
@@ -63,7 +65,7 @@ function AuthPage() {
         return;
       }
       if (response.data.session) {
-        await navigate({ to: "/dashboard", replace: true });
+        await navigate({ to: "/my-complaints", replace: true });
       } else {
         setError(t("app.auth.error"));
       }
@@ -84,7 +86,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    await navigate({ to: "/dashboard", replace: true });
+    await navigate({ to: "/my-complaints", replace: true });
   }
 
   return (
@@ -162,13 +164,18 @@ function AuthPage() {
         {t("app.auth.google")}
       </button>
 
-      <button
-        type="button"
-        onClick={() => setMode((m) => (m === "in" ? "up" : "in"))}
-        className="mt-6 text-sm font-semibold text-secondary underline"
-      >
-        {mode === "in" ? t("app.auth.switchToSignUp") : t("app.auth.switchToSignIn")}
-      </button>
+      <div className="mt-6 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setMode((m) => (m === "in" ? "up" : "in"))}
+          className="self-start text-sm font-semibold text-secondary underline"
+        >
+          {mode === "in" ? t("app.auth.switchToSignUp") : t("app.auth.switchToSignIn")}
+        </button>
+        <Link to="/staff-login" className="self-start text-sm font-semibold text-secondary underline">
+          {t("app.auth.toStaff")}
+        </Link>
+      </div>
     </div>
   );
 }

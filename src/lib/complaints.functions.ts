@@ -100,6 +100,34 @@ async function optionalUserId(): Promise<string | null> {
   }
 }
 
+export const STAFF_ROLES = [
+  "intake_officer",
+  "field_officer",
+  "supervisor",
+  "admin",
+  "auditor",
+] as const;
+
+type AuthedContext = { supabase: { from: (table: string) => any }; userId: string };
+
+async function rolesOf(context: AuthedContext): Promise<string[]> {
+  const { data } = await context.supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId);
+  return ((data ?? []) as { role: string }[]).map((row) => row.role);
+}
+
+/** Official-only areas: citizens must never read or change another person's complaint. */
+async function requireStaff(context: AuthedContext): Promise<string[]> {
+  const roles = await rolesOf(context);
+  const staff = roles.filter((role) => (STAFF_ROLES as readonly string[]).includes(role));
+  if (staff.length === 0) throw new Error("NOT_STAFF");
+  return staff;
+}
+
+
+
 export const submitComplaint = createServerFn({ method: "POST" })
   .inputValidator((input: ComplaintInput) => {
     const category = CATEGORIES.includes(input.category as (typeof CATEGORIES)[number])
@@ -111,6 +139,11 @@ export const submitComplaint = createServerFn({ method: "POST" })
     if (title.length < 4) throw new Error("TITLE_TOO_SHORT");
     if (description.length < 15) throw new Error("DESCRIPTION_TOO_SHORT");
     if (locationText.length < 3) throw new Error("LOCATION_REQUIRED");
+
+    // Photo evidence is mandatory: every complaint must carry at least one image.
+    const photos = (input.photos ?? []).slice(0, MEDIA_POLICY.maxPhotos);
+    if (photos.length === 0) throw new Error("PHOTO_REQUIRED");
+
 
     const device = input.device
       ? {
@@ -133,7 +166,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
       issueLat: num(input.issueLat),
       issueLng: num(input.issueLng),
       device,
-      photos: (input.photos ?? []).slice(0, MEDIA_POLICY.maxPhotos),
+      photos,
     };
   })
   .handler(async ({ data }) => {
@@ -332,6 +365,7 @@ export const listComplaints = createServerFn({ method: "POST" })
     sort: str(input?.sort, 20) || "priority",
   }))
   .handler(async ({ data, context }) => {
+    await requireStaff(context);
     let query = context.supabase
       .from("complaints")
       .select(
@@ -394,11 +428,72 @@ export const getComplaintEvidence = createServerFn({ method: "POST" })
 export const getMyAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data: roles } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId);
-    return { roles: (roles ?? []).map((r) => r.role as string) };
+    const roles = await rolesOf(context);
+    const staffRoles = roles.filter((role) => (STAFF_ROLES as readonly string[]).includes(role));
+    return {
+      roles,
+      isStaff: staffRoles.length > 0,
+      canUpdate: staffRoles.some((role) => role !== "auditor"),
+    };
+  });
+
+/** Department-wise tracking for the official dashboard. */
+export const getDepartmentTracking = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await requireStaff(context);
+
+    const { data: departments } = await context.supabase
+      .from("departments")
+      .select("id, code, name_en, name_hi, name_mr")
+      .order("name_en", { ascending: true });
+
+    const { data: rows, error } = await context.supabase
+      .from("complaints")
+      .select("department_id, status, due_date, priority_band")
+      .limit(5000);
+    if (error) {
+      console.error("getDepartmentTracking failed", error.message);
+      throw new Error("LIST_FAILED");
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const closed = ["resolved", "rejected"];
+    const buckets = new Map<
+      string,
+      { total: number; open: number; overdue: number; resolved: number; critical: number }
+    >();
+
+    for (const row of rows ?? []) {
+      const key = row.department_id ?? "unassigned";
+      const bucket =
+        buckets.get(key) ?? { total: 0, open: 0, overdue: 0, resolved: 0, critical: 0 };
+      bucket.total += 1;
+      if (row.status === "resolved") bucket.resolved += 1;
+      if (!closed.includes(row.status)) {
+        bucket.open += 1;
+        if (row.due_date && row.due_date < today) bucket.overdue += 1;
+      }
+      if (row.priority_band === "critical") bucket.critical += 1;
+      buckets.set(key, bucket);
+    }
+
+    const empty = { total: 0, open: 0, overdue: 0, resolved: 0, critical: 0 };
+    const departmentRows = (departments ?? [])
+      .map((dept) => ({ ...dept, ...(buckets.get(dept.id) ?? empty) }))
+      .filter((dept) => dept.total > 0)
+      .sort((a, b) => b.open - a.open || b.total - a.total);
+
+    const unassigned = buckets.get("unassigned");
+
+    return {
+      departments: departmentRows,
+      unassigned: unassigned ?? null,
+      totals: {
+        total: (rows ?? []).length,
+        open: (rows ?? []).filter((row) => !closed.includes(row.status)).length,
+      },
+    };
   });
 
 export const updateComplaintStatus = createServerFn({ method: "POST" })
@@ -417,6 +512,9 @@ export const updateComplaintStatus = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
+    const staffRoles = await requireStaff(context);
+    // Auditors may read the queue but never change a complaint.
+    if (!staffRoles.some((role) => role !== "auditor")) throw new Error("READ_ONLY_ROLE");
     const patch = {
       status: data.status,
       updated_at: new Date().toISOString(),

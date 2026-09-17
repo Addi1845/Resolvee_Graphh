@@ -97,6 +97,10 @@ function ReportPage() {
     if (current === "locate" && draft.location.locationText.trim().length < 3) {
       return t("app.report.errLocation");
     }
+    // Photo evidence is mandatory for every complaint.
+    if (current === "attach" && photos.length === 0) {
+      return t("app.media.required");
+    }
     return null;
   }
 
@@ -145,8 +149,9 @@ function ReportPage() {
       });
       setResult({ code: response.trackingCode, photos: response.photosStored });
       window.localStorage.removeItem(DRAFT_KEY);
-    } catch {
-      setError(t("app.report.errGeneric"));
+    } catch (submitError) {
+      const message = submitError instanceof Error ? submitError.message : "";
+      setError(message.includes("PHOTO_REQUIRED") ? t("app.media.required") : t("app.report.errGeneric"));
     } finally {
       setBusy(false);
     }
