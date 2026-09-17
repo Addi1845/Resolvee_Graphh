@@ -322,6 +322,21 @@ export const en = {
       reviewNote:
         "This is a recommendation. An officer confirms or corrects the routing before work starts.",
     },
+    voice: {
+      start: "Speak instead of typing",
+      stop: "Stop recording",
+      working: "Writing out your words…",
+      note: "Your words are written into the box above. Please read and correct them before you continue.",
+      added: "Added. Please check the wording.",
+      unsupported: "This device or browser cannot record audio. Please type the complaint instead.",
+      denied: "Microphone permission was refused. Please allow it, or type the complaint instead.",
+      error: {
+        empty: "Nothing could be heard. Please record again in a quieter place.",
+        busy: "The service is busy right now. Please try again in a moment.",
+        unavailable: "Voice entry is unavailable right now. Please type the complaint instead.",
+        failed: "The recording could not be written out. Please try again or type it instead.",
+      },
+    },
     report: {
       title: "Report a Complaint",
       intro:
