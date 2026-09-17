@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Images, RefreshCw } from "lucide-react";
 
 import { useI18n } from "@/i18n";
+import { MapPanel } from "@/components/map/MapPanel";
+import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import {
   CATEGORIES,
   STATUSES,
@@ -284,6 +286,44 @@ function DashboardPage() {
             </p>
           )}
         </section>
+      ) : null}
+
+      {isStaff ? (
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <WorkloadChart
+            rows={[
+              ...(tracking?.departments ?? []).map((dept) => ({
+                name: departmentName(dept),
+                open: dept.open,
+                overdue: dept.overdue,
+                resolved: dept.resolved,
+              })),
+              ...(tracking?.unassigned
+                ? [
+                    {
+                      name: t("app.depts.unassigned"),
+                      open: tracking.unassigned.open,
+                      overdue: tracking.unassigned.overdue,
+                      resolved: tracking.unassigned.resolved,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+          <MapPanel
+            points={(data?.complaints ?? [])
+              .filter((row) => row.issue_lat !== null && row.issue_lng !== null)
+              .map((row) => ({
+                id: row.id,
+                lat: row.issue_lat as number,
+                lng: row.issue_lng as number,
+                title: row.title,
+                subtitle: `${row.tracking_code} · ${t(`app.statuses.${row.status}`)}`,
+                band: row.priority_band,
+              }))}
+            height={360}
+          />
+        </div>
       ) : null}
 
       {isStaff ? (
