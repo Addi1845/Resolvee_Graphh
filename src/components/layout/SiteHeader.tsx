@@ -55,36 +55,31 @@ export function SiteHeader() {
 
   return (
     <header className="bg-primary text-primary-foreground">
-      <div className="border-b border-primary-foreground/15">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-end gap-2 px-4 py-1.5 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <LanguageSelector />
-            <AccessibilityControls />
-          </div>
-        </div>
-      </div>
-
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4">
-        <Link to="/" className="flex items-center gap-3 rounded-sm">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-md bg-primary-foreground">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
+        <Link to="/" className="flex min-w-0 items-center gap-2.5 rounded-sm">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary-foreground">
             <img
               src={logoUrl}
               alt=""
               aria-hidden="true"
               width={1024}
               height={1024}
-              className="size-10 object-contain"
+              className="size-8 object-contain"
             />
           </span>
-          <span className="flex flex-col leading-tight">
-            <span className="text-lg font-bold tracking-tight sm:text-xl">{t("brand.name")}</span>
-            <span className="text-xs text-primary-foreground/80 sm:text-sm">
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-base font-bold tracking-tight sm:text-lg">{t("brand.name")}</span>
+            <span className="hidden truncate text-xs text-primary-foreground/80 sm:block">
               {t("brand.subtitle")}
             </span>
           </span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <div className="hidden items-center gap-1.5 border-e border-primary-foreground/20 pe-2.5 me-1 sm:flex">
+            <LanguageSelector />
+            <AccessibilityControls />
+          </div>
           {session ? (
             <>
               <Link
