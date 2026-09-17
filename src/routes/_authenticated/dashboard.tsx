@@ -372,7 +372,7 @@ function DashboardPage() {
         </p>
       ) : null}
 
-      {isStaff ? (
+      {isStaff && canVerify ? (
         <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
           <h2 className="text-xl font-bold text-primary">{t("app.review.verifyTitle")}</h2>
           <p className="mt-1 text-base text-muted-foreground">{t("app.review.verifyIntro")}</p>
