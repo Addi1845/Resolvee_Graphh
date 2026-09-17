@@ -158,7 +158,7 @@ function ComplaintReportPage() {
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               {[
                 { label: t("app.track.location"), value: complaint.location_text },
-                { label: t("app.track.deadline"), value: complaint.due_date ?? "—" },
+                { label: t("app.track.due"), value: complaint.due_date ?? "—" },
                 {
                   label: t("app.reportView.reporter"),
                   value: complaint.reporter_name || t("app.reportView.notShared"),
@@ -232,9 +232,6 @@ function ComplaintReportPage() {
               {complaint.analysis_method === "ai_vision"
                 ? t("app.track.methodAi")
                 : t("app.track.methodRule")}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("app.analysis.policy", { version: complaint.priority_policy_version })}
             </p>
           </section>
 
