@@ -39,7 +39,7 @@ export function MapPanel({
           <Suspense
             fallback={<p className="text-base text-muted-foreground">{t("app.common.loading")}</p>}
           >
-            <ComplaintMap points={points} height={height} />
+            <ComplaintMap points={points} height={height ?? 320} />
           </Suspense>
         ) : (
           <p className="text-base text-muted-foreground">{t("app.common.loading")}</p>
