@@ -311,7 +311,11 @@ export const submitComplaint = createServerFn({ method: "POST" })
           proximityState: proximity.state,
           priorityBand: priority.band,
           priorityScore: priority.score,
-          suggestedCategory: suggestion.category,
+          detectedCategory: triage.category,
+          analysisMethod: triage.method,
+          needsReview: triage.needsReview,
+          hazards: triage.hazards,
+          departments: routed.map((entry) => ({ code: entry.code, role: entry.role })),
           urgentReview: priority.urgentReviewFlag,
         };
       }
