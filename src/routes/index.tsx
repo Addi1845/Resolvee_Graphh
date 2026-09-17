@@ -12,6 +12,7 @@ import {
   Search,
 } from "lucide-react";
 
+import { Reveal } from "@/components/ui/reveal";
 import { useI18n } from "@/i18n";
 
 export const Route = createFileRoute("/")({
@@ -83,7 +84,7 @@ function Index() {
       </div>
 
       {/* Process */}
-      <section className="mx-auto max-w-7xl px-4 py-14">
+      <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14">
         <h2 className="text-2xl font-bold text-primary sm:text-3xl">{dict.home.process.title}</h2>
         <ol className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {dict.home.process.steps.map((step, index) => (
@@ -99,10 +100,10 @@ function Index() {
             </li>
           ))}
         </ol>
-      </section>
+      </Reveal>
 
       {/* Categories */}
-      <section className="border-y border-border bg-surface">
+      <Reveal as="section" className="border-y border-border bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-14">
           <h2 className="text-2xl font-bold text-primary sm:text-3xl">
             {dict.home.categories.title}
@@ -116,10 +117,10 @@ function Index() {
             ))}
           </ul>
         </div>
-      </section>
+      </Reveal>
 
       {/* Submission methods */}
-      <section className="mx-auto max-w-7xl px-4 py-14">
+      <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14">
         <h2 className="text-2xl font-bold text-primary sm:text-3xl">{dict.home.methods.title}</h2>
         <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {dict.home.methods.items.map((item, index) => {
@@ -136,10 +137,10 @@ function Index() {
             );
           })}
         </ul>
-      </section>
+      </Reveal>
 
       {/* Tracking + languages */}
-      <section className="border-y border-border bg-surface">
+      <Reveal as="section" className="border-y border-border bg-surface">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 lg:grid-cols-2">
           <div>
             <h2 className="flex items-center gap-2 text-2xl font-bold text-primary">
@@ -162,10 +163,10 @@ function Index() {
             <p className="mt-3 leading-relaxed text-muted-foreground">{dict.home.languages.text}</p>
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* FAQ */}
-      <section className="mx-auto max-w-4xl px-4 py-14">
+      <Reveal as="section" className="mx-auto max-w-4xl px-4 py-14">
         <h2 className="text-2xl font-bold text-primary sm:text-3xl">{dict.home.faq.title}</h2>
         <div className="mt-6 divide-y divide-border rounded-md border border-border bg-surface">
           {dict.home.faq.items.map((item) => (
@@ -185,10 +186,10 @@ function Index() {
             </details>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* Accessibility and privacy */}
-      <section className="border-t border-border bg-surface">
+      <Reveal as="section" className="border-t border-border bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-14">
           <h2 className="text-2xl font-bold text-primary sm:text-3xl">{dict.home.trust.title}</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -213,7 +214,7 @@ function Index() {
           </div>
           <p className="mt-6 text-sm text-muted-foreground">{t("footer.aboutText")}</p>
         </div>
-      </section>
+      </Reveal>
     </>
   );
 }
