@@ -151,7 +151,6 @@ export const submitComplaint = createServerFn({ method: "POST" })
       : null;
 
     return {
-      category,
       title,
       description,
       locationText,
@@ -167,13 +166,9 @@ export const submitComplaint = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { triageComplaint } = await import("@/lib/ai-triage.server");
+    const { resolveDepartments, ROUTING_POLICY_VERSION } = await import("@/lib/routing");
     const userId = await optionalUserId();
-
-    const { data: dept } = await supabaseAdmin
-      .from("departments")
-      .select("id")
-      .eq("code", data.category)
-      .maybeSingle();
 
     const issuePoint =
       data.issueLat !== null && data.issueLng !== null
@@ -181,11 +176,28 @@ export const submitComplaint = createServerFn({ method: "POST" })
         : null;
     const proximity = evaluateProximity(issuePoint, data.device);
 
-    const analysisText = `${data.title} ${data.description} ${data.landmark}`;
-    const suggestion = suggestCategory(analysisText);
-    const priority = assessPriority({
-      category: data.category,
+    const analysisText = `${data.title}\n${data.description}\nLocation: ${data.locationText} ${data.landmark}`;
+
+    // The citizen never picks a department. The model reads the text and the
+    // photos, and the routing policy turns its category codes into departments.
+    const triage = await triageComplaint({
       text: analysisText,
+      photoDataUrls: data.photos.map((photo) => photo.dataUrl),
+    });
+
+    const routed = resolveDepartments(triage.category, triage.supportingCategories);
+    const { data: departmentRows } = await supabaseAdmin
+      .from("departments")
+      .select("id, code")
+      .in("code", routed.map((entry) => entry.code));
+    const departmentIdByCode = new Map(
+      (departmentRows ?? []).map((row) => [row.code, row.id] as const),
+    );
+    const primaryDepartmentId = departmentIdByCode.get(triage.category) ?? null;
+
+    const priority = assessPriority({
+      category: triage.category,
+      text: `${analysisText} ${triage.hazards.join(" ")}`,
       hasPhotos: data.photos.length > 0,
     });
 
