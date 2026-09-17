@@ -85,7 +85,7 @@ export function SiteHeader() {
                 to="/my-complaints"
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
-                {t("app.mine.title")}
+                {t("app.auth.myDashboard")}
               </Link>
               {isStaff ? (
               <Link
@@ -93,7 +93,7 @@ export function SiteHeader() {
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
                 <LayoutDashboard aria-hidden="true" className="size-4" />
-                {t("app.auth.dashboard")}
+                {t("app.auth.staffDashboard")}
               </Link>
               ) : null}
               <button
@@ -162,7 +162,7 @@ export function SiteHeader() {
                   onClick={() => setMenuOpen(false)}
                   className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
                 >
-                  {t("app.mine.title")}
+                  {t("app.auth.myDashboard")}
                 </Link>
                 {isStaff ? (
                 <Link
@@ -171,7 +171,7 @@ export function SiteHeader() {
                   className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
                 >
                   <LayoutDashboard aria-hidden="true" className="size-4" />
-                  {t("app.auth.dashboard")}
+                  {t("app.auth.staffDashboard")}
                 </Link>
                 ) : null}
                 <button
