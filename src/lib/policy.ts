@@ -12,7 +12,80 @@ export const MEDIA_POLICY = {
   acceptedMime: ["image/jpeg", "image/png", "image/webp"] as const,
   /** Client-side downscale target before upload. */
   maxEdgePx: 1600,
+  /** Short clips help show movement (running water, sparking wire). */
+  maxVideos: 1,
+  maxVideoBytes: 25 * 1024 * 1024,
+  acceptedVideoMime: ["video/mp4", "video/webm", "video/quicktime"] as const,
 };
+
+/**
+ * Duplicate-suggestion policy. Links are suggestions for a person to confirm;
+ * nothing is ever merged or closed automatically.
+ */
+export const DUPLICATE_POLICY = {
+  version: "duplicate-v1",
+  radiusMetres: 150,
+  windowDays: 30,
+  minScore: 45,
+};
+
+const STOP_WORDS = new Set([
+  "the","and","for","near","from","with","this","that","there","here","have","has",
+  "is","are","was","were","of","in","on","at","to","a","an","it","not","no","been",
+]);
+
+function tokens(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word)),
+  );
+}
+
+export type DuplicateCandidate = {
+  category: string;
+  text: string;
+  lat: number | null;
+  lng: number | null;
+};
+
+/**
+ * Explainable duplicate score (0-100). Deterministic, versioned and always
+ * reviewed by a person before two reports are treated as the same problem.
+ */
+export function scoreDuplicate(
+  a: DuplicateCandidate,
+  b: DuplicateCandidate,
+): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let score = 0;
+
+  if (a.category === b.category) {
+    score += 30;
+    reasons.push(`Same problem type (${a.category})`);
+  }
+
+  if (a.lat !== null && a.lng !== null && b.lat !== null && b.lng !== null) {
+    const metres = haversineMetres({ lat: a.lat, lng: a.lng }, { lat: b.lat, lng: b.lng });
+    if (metres <= DUPLICATE_POLICY.radiusMetres) {
+      const closeness = 1 - metres / DUPLICATE_POLICY.radiusMetres;
+      score += Math.round(40 * closeness);
+      reasons.push(`Pins are ${Math.round(metres)} m apart`);
+    }
+  }
+
+  const left = tokens(a.text);
+  const right = tokens(b.text);
+  const shared = [...left].filter((word) => right.has(word));
+  const union = new Set([...left, ...right]).size;
+  if (union > 0 && shared.length > 0) {
+    score += Math.round(40 * (shared.length / union));
+    reasons.push(`Shared wording: ${shared.slice(0, 5).join(", ")}`);
+  }
+
+  return { score: Math.min(100, score), reasons };
+}
 
 export const LOCATION_POLICY = {
   version: "proximity-v1",

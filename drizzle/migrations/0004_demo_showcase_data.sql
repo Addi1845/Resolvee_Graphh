@@ -1,0 +1,151 @@
+CREATE POLICY "Staff add duplicate links" ON public.complaint_duplicates
+  FOR INSERT TO authenticated WITH CHECK (public.is_staff(auth.uid()));
+
+WITH seeded AS (
+  INSERT INTO public.complaints (
+    id, tracking_code, category, title, description, language, location_text, landmark,
+    issue_lat, issue_lng, department_id, priority, status, due_date,
+    proximity_state, proximity_distance_m, analysis_status, analysis_method,
+    suggested_category, analysis_notes, priority_score, priority_band, priority_factors,
+    created_at, updated_at
+  ) VALUES
+  ('11111111-1111-4111-8111-000000000001','RG-2026-DEMO01','water',
+   'Burst water pipeline flooding the road',
+   'Demo sample. A main pipeline has burst near the market crossing. Water is flowing across both lanes and mud has spread over the footpath.',
+   'en','Market Road crossing, Ward 4','Near vegetable market',
+   19.0760,72.8777,(SELECT id FROM public.departments WHERE code='water'),'critical','in_progress', CURRENT_DATE + 2,
+   'nearby',35,'completed','rule_based_demo','water',
+   '{"demo":true,"summary":"Pipeline burst with road flooding and mud spread."}'::jsonb,
+   82,'critical','{"safety":"high","service_disruption":"high"}'::jsonb,
+   now() - interval '3 days', now() - interval '1 day'),
+  ('11111111-1111-4111-8111-000000000002','RG-2026-DEMO02','water',
+   'Water leaking across Market Road since morning',
+   'Demo sample. The same stretch of Market Road is flooded from a leaking pipe. Shops cannot open.',
+   'en','Market Road, Ward 4','Opposite bus stop',
+   19.0761,72.8778,(SELECT id FROM public.departments WHERE code='water'),'high','submitted', CURRENT_DATE + 5,
+   'nearby',48,'completed','rule_based_demo','water',
+   '{"demo":true,"summary":"Likely the same pipeline burst reported separately."}'::jsonb,
+   67,'high','{"safety":"medium","service_disruption":"high"}'::jsonb,
+   now() - interval '2 days', now() - interval '2 days'),
+  ('11111111-1111-4111-8111-000000000003','RG-2026-DEMO03','roads',
+   'Deep pothole causing two-wheeler falls',
+   'Demo sample. A deep pothole at the school turning has caused several two-wheeler riders to fall in the evening.',
+   'en','School Road turning, Ward 7','Beside primary school',
+   19.0812,72.8830,(SELECT id FROM public.departments WHERE code='roads'),'high','assigned', CURRENT_DATE + 3,
+   'uncertain',NULL,'completed','ai_vision','roads',
+   '{"demo":true,"summary":"Road surface damage near a school."}'::jsonb,
+   71,'high','{"safety":"high","sensitive_site":"yes"}'::jsonb,
+   now() - interval '6 days', now() - interval '2 days'),
+  ('11111111-1111-4111-8111-000000000004','RG-2026-DEMO04','sanitation',
+   'Garbage not collected for a week',
+   'Demo sample. The community bin is overflowing and waste has spread onto the lane. Strong smell and stray animals.',
+   'en','Lane 3, Shanti Nagar','Near community hall',
+   19.0705,72.8690,(SELECT id FROM public.departments WHERE code='sanitation'),'medium','awaiting_verification', CURRENT_DATE + 1,
+   'nearby',22,'completed','rule_based_demo','sanitation',
+   '{"demo":true,"summary":"Uncollected waste with a public health risk."}'::jsonb,
+   54,'medium','{"health":"medium"}'::jsonb,
+   now() - interval '8 days', now() - interval '1 day'),
+  ('11111111-1111-4111-8111-000000000005','RG-2026-DEMO05','drainage',
+   'Open drain overflowing after rain',
+   'Demo sample. The drain near the railway underpass overflows after every shower and water enters ground-floor homes.',
+   'en','Railway underpass, Ward 2',NULL,
+   19.0650,72.8600,(SELECT id FROM public.departments WHERE code='drainage'),'high','awaiting_verification', CURRENT_DATE - 1,
+   'stale',NULL,'completed','rule_based_demo','drainage',
+   '{"demo":true,"summary":"Recurring drain overflow affecting homes."}'::jsonb,
+   69,'high','{"health":"high","service_disruption":"medium"}'::jsonb,
+   now() - interval '12 days', now() - interval '3 days'),
+  ('11111111-1111-4111-8111-000000000006','RG-2026-DEMO06','electricity',
+   'Street light out on the whole stretch',
+   'Demo sample. All street lights between the park and the clinic are off, making the walk unsafe after dark.',
+   'en','Park Road, Ward 9','Between park and clinic',
+   19.0900,72.8900,(SELECT id FROM public.departments WHERE code='electricity'),'medium','acknowledged', CURRENT_DATE + 6,
+   'unavailable',NULL,'completed','rule_based_demo','electricity',
+   '{"demo":true,"summary":"Street lighting failure on a pedestrian route."}'::jsonb,
+   48,'medium','{"safety":"medium"}'::jsonb,
+   now() - interval '4 days', now() - interval '4 days'),
+  ('11111111-1111-4111-8111-000000000007','RG-2026-DEMO07','safety',
+   'Broken footpath railing beside busy junction',
+   'Demo sample. The railing has collapsed and children walk onto the carriageway.',
+   'en','Gandhi Chowk junction',NULL,
+   19.0755,72.8750,(SELECT id FROM public.departments WHERE code='safety'),'critical','submitted', CURRENT_DATE - 2,
+   'outside',480,'completed','ai_vision','safety',
+   '{"demo":true,"summary":"Damaged pedestrian barrier at a busy junction."}'::jsonb,
+   78,'critical','{"safety":"high"}'::jsonb,
+   now() - interval '10 days', now() - interval '6 days'),
+  ('11111111-1111-4111-8111-000000000008','RG-2026-DEMO08','health',
+   'Mosquito breeding in stagnant water',
+   'Demo sample. Stagnant water has collected in an empty plot and mosquito numbers have risen sharply.',
+   'en','Empty plot, Sector 5','Behind the dispensary',
+   19.0680,72.8720,(SELECT id FROM public.departments WHERE code='health'),'medium','resolved', CURRENT_DATE - 4,
+   'nearby',60,'completed','rule_based_demo','health',
+   '{"demo":true,"summary":"Standing water creating a public health risk."}'::jsonb,
+   51,'medium','{"health":"medium"}'::jsonb,
+   now() - interval '20 days', now() - interval '5 days'),
+  ('11111111-1111-4111-8111-000000000009','RG-2026-DEMO09','sanitation',
+   'Waste dumped again at the same corner',
+   'Demo sample. Waste has been dumped at this corner for the third time this month.',
+   'en','Lane 3 corner, Shanti Nagar','Near community hall',
+   19.0706,72.8691,(SELECT id FROM public.departments WHERE code='sanitation'),'medium','submitted', CURRENT_DATE + 4,
+   'nearby',40,'completed','rule_based_demo','sanitation',
+   '{"demo":true,"summary":"Repeat dumping at a known hotspot."}'::jsonb,
+   47,'medium','{"health":"medium"}'::jsonb,
+   now() - interval '1 day', now() - interval '1 day'),
+  ('11111111-1111-4111-8111-000000000010','RG-2026-DEMO10','other',
+   'Unclear report needing officer review',
+   'Demo sample. The description is vague, so the suggestion is uncertain and a person must confirm the right service.',
+   'en','Ward 6, exact spot not given',NULL,
+   NULL,NULL,(SELECT id FROM public.departments WHERE code='other'),'low','submitted', CURRENT_DATE + 7,
+   'unavailable',NULL,'completed','rule_based_demo','other',
+   '{"demo":true,"summary":"Insufficient detail; human review required."}'::jsonb,
+   24,'low','{}'::jsonb,
+   now() - interval '5 hours', now() - interval '5 hours')
+  RETURNING id
+)
+INSERT INTO public.complaint_departments (complaint_id, department_id, role, source, reason)
+SELECT s.id, d.id, r.role, 'demo_seed', r.reason
+FROM seeded s
+JOIN (VALUES
+  ('11111111-1111-4111-8111-000000000001'::uuid,'water','primary','Accountable owner for the pipeline failure.'),
+  ('11111111-1111-4111-8111-000000000001'::uuid,'roads','supporting','Road surface restoration after the excavation.'),
+  ('11111111-1111-4111-8111-000000000001'::uuid,'sanitation','supporting','Clearing mud and debris left by the flooding.'),
+  ('11111111-1111-4111-8111-000000000002'::uuid,'water','primary','Accountable owner for the leak.'),
+  ('11111111-1111-4111-8111-000000000002'::uuid,'roads','supporting','Surface repair once the leak is stopped.'),
+  ('11111111-1111-4111-8111-000000000002'::uuid,'sanitation','supporting','Clean-up of the affected stretch.'),
+  ('11111111-1111-4111-8111-000000000003'::uuid,'roads','primary','Accountable owner for road repair.'),
+  ('11111111-1111-4111-8111-000000000003'::uuid,'safety','supporting','Temporary warning and barricading near a school.'),
+  ('11111111-1111-4111-8111-000000000004'::uuid,'sanitation','primary','Accountable owner for waste collection.'),
+  ('11111111-1111-4111-8111-000000000004'::uuid,'health','supporting','Health risk from accumulated waste.'),
+  ('11111111-1111-4111-8111-000000000005'::uuid,'drainage','primary','Accountable owner for the drain.'),
+  ('11111111-1111-4111-8111-000000000005'::uuid,'sanitation','supporting','Clearing blockages and debris.'),
+  ('11111111-1111-4111-8111-000000000005'::uuid,'health','supporting','Contamination risk for nearby homes.'),
+  ('11111111-1111-4111-8111-000000000006'::uuid,'electricity','primary','Accountable owner for street lighting.'),
+  ('11111111-1111-4111-8111-000000000006'::uuid,'safety','supporting','Pedestrian safety on an unlit route.'),
+  ('11111111-1111-4111-8111-000000000007'::uuid,'safety','primary','Accountable owner for public safety works.'),
+  ('11111111-1111-4111-8111-000000000008'::uuid,'health','primary','Accountable owner for the health risk.'),
+  ('11111111-1111-4111-8111-000000000008'::uuid,'sanitation','supporting','Removal of stagnant water and waste.'),
+  ('11111111-1111-4111-8111-000000000009'::uuid,'sanitation','primary','Accountable owner for waste collection.'),
+  ('11111111-1111-4111-8111-000000000009'::uuid,'health','supporting','Health risk from repeat dumping.'),
+  ('11111111-1111-4111-8111-000000000010'::uuid,'other','primary','Unassigned until an officer confirms the service.')
+) AS r(complaint_id, dept_code, role, reason) ON r.complaint_id = s.id
+JOIN public.departments d ON d.code = r.dept_code;
+
+INSERT INTO public.complaint_duplicates (complaint_id, related_complaint_id, similarity, reason, state, source)
+VALUES
+ ('11111111-1111-4111-8111-000000000002','11111111-1111-4111-8111-000000000001',
+  88.0,'Same category; about 14 m apart; shared wording: water, road, leak','suggested','rule_based_demo'),
+ ('11111111-1111-4111-8111-000000000009','11111111-1111-4111-8111-000000000004',
+  72.0,'Same category; about 12 m apart; shared wording: waste, lane','suggested','rule_based_demo');
+
+INSERT INTO public.complaint_updates (complaint_id, status, note)
+VALUES
+ ('11111111-1111-4111-8111-000000000001','acknowledged','Demo sample. Report acknowledged by the intake desk.'),
+ ('11111111-1111-4111-8111-000000000001','in_progress','Demo sample. Water team on site; road and sanitation teams informed.'),
+ ('11111111-1111-4111-8111-000000000003','assigned','Demo sample. Assigned to the road repair crew.'),
+ ('11111111-1111-4111-8111-000000000004','awaiting_verification','Demo sample. Collection reported complete; evidence pending check.'),
+ ('11111111-1111-4111-8111-000000000005','awaiting_verification','Demo sample. Drain cleared; awaiting verification after rain.'),
+ ('11111111-1111-4111-8111-000000000008','resolved','Demo sample. Water drained and treated; verified on site.');
+
+INSERT INTO public.complaint_verifications (complaint_id, decision, note, reviewer_name)
+VALUES
+ ('11111111-1111-4111-8111-000000000008','verified','Demo sample. Site photographs matched the reported location.','Demo supervisor'),
+ ('11111111-1111-4111-8111-000000000005','rework','Demo sample. Evidence photo was unclear; asked the crew to re-submit.','Demo supervisor');

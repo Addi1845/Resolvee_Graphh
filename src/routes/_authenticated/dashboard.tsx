@@ -11,6 +11,10 @@ import {
   getDepartmentTracking,
   getMyAccess,
   listComplaints,
+  listDuplicateReview,
+  listVerificationQueue,
+  recordVerification,
+  reviewDuplicateLink,
   updateComplaintStatus,
 } from "@/lib/complaints.functions";
 import { PRIORITY_POLICY } from "@/lib/policy";
@@ -36,6 +40,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type ListResult = Awaited<ReturnType<typeof listComplaints>>;
 type Access = Awaited<ReturnType<typeof getMyAccess>>;
 type Tracking = Awaited<ReturnType<typeof getDepartmentTracking>>;
+type Duplicates = Awaited<ReturnType<typeof listDuplicateReview>>;
+type Verification = Awaited<ReturnType<typeof listVerificationQueue>>;
 type TrackingRow = Tracking["departments"][number];
 type Complaint = ListResult["complaints"][number];
 type PriorityFactor = { code: string; value: number | null; weight: number; reason: string };
@@ -58,7 +64,14 @@ function DashboardPage() {
   const saveStatus = useServerFn(updateComplaintStatus);
 
   const fetchTracking = useServerFn(getDepartmentTracking);
+  const fetchDuplicates = useServerFn(listDuplicateReview);
+  const fetchVerification = useServerFn(listVerificationQueue);
+  const saveDuplicate = useServerFn(reviewDuplicateLink);
+  const saveVerification = useServerFn(recordVerification);
 
+  const [duplicates, setDuplicates] = useState<Duplicates | null>(null);
+  const [verification, setVerification] = useState<Verification | null>(null);
+  const [verifyNotes, setVerifyNotes] = useState<Record<string, string>>({});
   const [access, setAccess] = useState<Access | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [summary, setSummary] = useState<ListResult["summary"] | null>(null);
@@ -78,17 +91,30 @@ function DashboardPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [result, departmentResult] = await Promise.all([
+      const [result, departmentResult, duplicateResult, verificationResult] = await Promise.all([
         fetchList({ data: { status, search, category, sort } }),
         fetchTracking({ data: undefined }),
+        fetchDuplicates({ data: undefined }),
+        fetchVerification({ data: undefined }),
       ]);
       setComplaints(result.complaints);
       setSummary(result.summary);
       setTracking(departmentResult);
+      setDuplicates(duplicateResult);
+      setVerification(verificationResult);
     } finally {
       setLoading(false);
     }
-  }, [fetchList, fetchTracking, status, search, category, sort]);
+  }, [
+    fetchList,
+    fetchTracking,
+    fetchDuplicates,
+    fetchVerification,
+    status,
+    search,
+    category,
+    sort,
+  ]);
 
   useEffect(() => {
     void fetchAccess({ data: undefined }).then(setAccess);
@@ -113,6 +139,27 @@ function DashboardPage() {
     try {
       await saveStatus({ data: { id, status: next, note: notes[id] ?? "" } });
       setNotes((prev) => ({ ...prev, [id]: "" }));
+      await load();
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleDuplicate(id: string, state: "confirmed" | "rejected") {
+    setSavingId(id);
+    try {
+      await saveDuplicate({ data: { id, state } });
+      await load();
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  async function handleVerification(id: string, decision: "verified" | "rework") {
+    setSavingId(id);
+    try {
+      await saveVerification({ data: { id, decision, note: verifyNotes[id] ?? "" } });
+      setVerifyNotes((prev) => ({ ...prev, [id]: "" }));
       await load();
     } finally {
       setSavingId(null);
@@ -239,6 +286,166 @@ function DashboardPage() {
         </section>
       ) : null}
 
+      {isStaff ? (
+        <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
+          <h2 className="text-xl font-bold text-primary">{t("app.review.dupTitle")}</h2>
+          <p className="mt-1 text-base text-muted-foreground">{t("app.review.dupIntro")}</p>
+
+          {duplicates && duplicates.links.length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {duplicates.links.map((link) => (
+                <li key={link.id} className="rounded-sm border border-border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                      {link.complaint?.tracking_code} ↔ {link.related?.tracking_code}
+                    </p>
+                    <span className="rounded-sm bg-info-soft px-3 py-1 text-sm font-bold text-primary">
+                      {t("app.review.dupMatch")}: {Math.round(Number(link.similarity))}/100
+                    </span>
+                  </div>
+                  <p className="mt-2 text-base font-semibold text-foreground">
+                    {link.complaint?.title}
+                  </p>
+                  <p className="text-base text-muted-foreground">{link.related?.title}</p>
+                  {link.reason ? (
+                    <p className="mt-2 text-sm text-muted-foreground">{link.reason}</p>
+                  ) : null}
+                  <p className="mt-2 text-sm font-semibold text-foreground">
+                    {link.state === "confirmed"
+                      ? t("app.review.stateConfirmed")
+                      : link.state === "rejected"
+                        ? t("app.review.stateRejected")
+                        : t("app.review.stateSuggested")}
+                  </p>
+                  {link.state === "suggested" && access?.canUpdate ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={savingId === link.id}
+                        onClick={() => void handleDuplicate(link.id, "confirmed")}
+                        className="inline-flex min-h-11 items-center rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-secondary disabled:opacity-60"
+                      >
+                        {t("app.review.confirm")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingId === link.id}
+                        onClick={() => void handleDuplicate(link.id, "rejected")}
+                        className="inline-flex min-h-11 items-center rounded-sm border border-border-strong px-4 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
+                      >
+                        {t("app.review.reject")}
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-base text-muted-foreground">
+              {loading ? t("app.common.loading") : t("app.review.dupEmpty")}
+            </p>
+          )}
+        </section>
+      ) : null}
+
+      {isStaff ? (
+        <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
+          <h2 className="text-xl font-bold text-primary">{t("app.review.verifyTitle")}</h2>
+          <p className="mt-1 text-base text-muted-foreground">{t("app.review.verifyIntro")}</p>
+
+          {verification && verification.pending.length > 0 ? (
+            <ul className="mt-4 space-y-3">
+              {verification.pending.map((item) => (
+                <li key={item.id} className="rounded-sm border border-border p-4">
+                  <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    {item.tracking_code} · {t(`app.categories.${item.category}`)}
+                  </p>
+                  <p className="mt-1 text-base font-semibold text-foreground">{item.title}</p>
+                  <p className="text-sm text-muted-foreground">{item.location_text}</p>
+                  <button
+                    type="button"
+                    onClick={() => void loadEvidence(item.id)}
+                    className="mt-2 inline-flex items-center gap-2 text-sm font-semibold text-secondary underline"
+                  >
+                    <Images aria-hidden="true" className="size-4" />
+                    {t("app.media.attached")}
+                  </button>
+                  {evidence[item.id] && evidence[item.id]!.length > 0 ? (
+                    <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {evidence[item.id]!.map((photo) => (
+                        <li key={photo.id}>
+                          <img
+                            src={photo.url}
+                            alt=""
+                            className="h-24 w-full rounded-sm border border-border object-cover"
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {access?.canUpdate ? (
+                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <div className="min-w-56 flex-1">
+                        <label
+                          htmlFor={`verify-${item.id}`}
+                          className="block text-sm font-semibold text-foreground"
+                        >
+                          {t("app.review.noteLabel")}
+                        </label>
+                        <input
+                          id={`verify-${item.id}`}
+                          value={verifyNotes[item.id] ?? ""}
+                          onChange={(event) =>
+                            setVerifyNotes((prev) => ({ ...prev, [item.id]: event.target.value }))
+                          }
+                          className={`mt-1.5 w-full ${fieldClass}`}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        disabled={savingId === item.id}
+                        onClick={() => void handleVerification(item.id, "verified")}
+                        className="inline-flex min-h-11 items-center rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-secondary disabled:opacity-60"
+                      >
+                        {t("app.review.verified")}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingId === item.id}
+                        onClick={() => void handleVerification(item.id, "rework")}
+                        className="inline-flex min-h-11 items-center rounded-sm border border-border-strong px-4 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
+                      >
+                        {t("app.review.rework")}
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-base text-muted-foreground">
+              {loading ? t("app.common.loading") : t("app.review.verifyEmpty")}
+            </p>
+          )}
+
+          {verification && verification.recent.length > 0 ? (
+            <div className="mt-5 rounded-sm border border-border bg-muted/40 p-4">
+              <p className="text-sm font-semibold text-foreground">{t("app.review.recent")}</p>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                {verification.recent.slice(0, 6).map((entry, index) => (
+                  <li key={index}>
+                    {entry.decision === "verified"
+                      ? t("app.review.verified")
+                      : t("app.review.rework")}{" "}
+                    · {formatDate(entry.created_at)}
+                    {entry.note ? ` · ${entry.note}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="mt-8 flex flex-wrap items-end gap-3">
         <div>

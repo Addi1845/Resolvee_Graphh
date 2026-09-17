@@ -163,11 +163,19 @@ function TrackPage() {
               <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {result.photos.map((photo) => (
                   <li key={photo.id}>
-                    <img
-                      src={photo.url}
-                      alt=""
-                      className="h-32 w-full rounded-sm border border-border object-cover"
-                    />
+                    {photo.kind === "video" ? (
+                      <video
+                        src={photo.url}
+                        controls
+                        className="h-32 w-full rounded-sm border border-border bg-black object-cover"
+                      />
+                    ) : (
+                      <img
+                        src={photo.url}
+                        alt=""
+                        className="h-32 w-full rounded-sm border border-border object-cover"
+                      />
+                    )}
                   </li>
                 ))}
               </ul>

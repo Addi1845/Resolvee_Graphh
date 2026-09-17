@@ -226,6 +226,32 @@ export const en = {
       tooLarge: "{name} is larger than {mb} MB and was not added.",
       wrongType: "{name} is not a supported image and was not added.",
       privacy: "Photos are stored privately and shown only to reviewing staff.",
+      addVideo: "Add a short video",
+      videoHelp:
+        "A video is optional. It is stored as evidence for officers; only the photos are read by the assistant.",
+      tooManyVideos: "You can attach at most {n} video.",
+      wrongVideoType: "{name} is not a supported video (MP4, WebM or MOV) and was not added.",
+      video: "Video evidence",
+    },
+    review: {
+      dupTitle: "Possible duplicate reports",
+      dupIntro:
+        "Reports about the same problem, suggested by wording, category and distance. Nothing is merged automatically — an officer decides.",
+      dupEmpty: "No possible duplicates are waiting for review.",
+      dupMatch: "Match score",
+      confirm: "Same problem",
+      reject: "Different problem",
+      stateSuggested: "Awaiting review",
+      stateConfirmed: "Confirmed as the same problem",
+      stateRejected: "Marked as a different problem",
+      verifyTitle: "Closure verification",
+      verifyIntro:
+        "Complaints where field work is done and the closure evidence still needs a person to check it.",
+      verifyEmpty: "No complaints are awaiting verification.",
+      verified: "Accept evidence and close",
+      rework: "Send back for rework",
+      noteLabel: "Verification note",
+      recent: "Recent verification decisions",
     },
     mine: {
       title: "My Complaints",
