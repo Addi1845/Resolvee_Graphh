@@ -38,15 +38,29 @@ function TrackPage() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<TrackResult | null>(null);
 
+  const runLookup = useCallback(
+    async (value: string) => {
+      if (!value.trim()) return;
+      setBusy(true);
+      try {
+        setResult(await lookup({ data: { code: value } }));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [lookup],
+  );
+
+  useEffect(() => {
+    if (search.code) void runLookup(search.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.code]);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    setBusy(true);
-    try {
-      setResult(await lookup({ data: { code } }));
-    } finally {
-      setBusy(false);
-    }
+    await runLookup(code);
   }
+
 
   const complaint = result?.found ? result.complaint : null;
   const department = complaint?.departments;
