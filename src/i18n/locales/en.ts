@@ -219,6 +219,7 @@ export const en = {
       title: "Add photos",
       intro: "Photos are optional. Up to {n} photos, each under {mb} MB.",
       add: "Add photos",
+      attached: "Photos submitted",
       remove: "Remove",
       tooMany: "You can attach at most {n} photos.",
       tooLarge: "{name} is larger than {mb} MB and was not added.",
