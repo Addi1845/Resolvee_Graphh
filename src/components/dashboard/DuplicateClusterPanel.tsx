@@ -95,7 +95,7 @@ export function DuplicateClusterPanel({
                 <div className="mt-3 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
                   <div>
                     <div className="rounded-sm border border-success/40 bg-success-soft p-3">
-                      <p className="text-sm font-bold uppercase tracking-wider text-success-foreground">
+                      <p className="text-sm font-bold uppercase tracking-wider text-primary">
                         {t("app.cluster.kept")} · {cluster.kept.tracking_code}
                       </p>
                       <p className="mt-1 text-base font-semibold text-foreground">

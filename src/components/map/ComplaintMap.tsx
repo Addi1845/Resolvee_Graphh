@@ -34,11 +34,21 @@ export default function ComplaintMap({
   const lat = points.reduce((sum, point) => sum + point.lat, 0) / points.length;
   const lng = points.reduce((sum, point) => sum + point.lng, 0) / points.length;
 
+  // Zoom to how far apart the pins actually are, so a cluster of reports on one
+  // street is not shown as a single dot on a city-wide map.
+  const spread = Math.max(
+    ...points.map((point) => Math.abs(point.lat - lat)),
+    ...points.map((point) => Math.abs(point.lng - lng)),
+    0,
+  );
+  const zoom =
+    spread < 0.0015 ? 17 : spread < 0.005 ? 16 : spread < 0.02 ? 14 : spread < 0.08 ? 12 : 11;
+
   return (
     <div className="overflow-hidden rounded-sm border border-border" style={{ height }}>
       <MapContainer
         center={[lat, lng]}
-        zoom={points.length === 1 ? 15 : 12}
+        zoom={zoom}
         scrollWheelZoom={false}
         style={{ height: "100%", width: "100%" }}
       >
