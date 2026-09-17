@@ -63,10 +63,13 @@ function ReportPage() {
   const [step, setStep] = useState<Step>("describe");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [photos, setPhotos] = useState<DraftPhoto[]>([]);
+  const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ code: string; photos: number } | null>(null);
 
+  // Restore the saved draft before the fields become editable, so a restore
+  // never overwrites something the person has already started typing.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(DRAFT_KEY);
@@ -74,15 +77,17 @@ function ReportPage() {
     } catch {
       /* ignore unreadable drafts */
     }
+    setReady(true);
   }, []);
 
   useEffect(() => {
+    if (!ready) return;
     try {
       window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } catch {
       /* storage may be unavailable */
     }
-  }, [draft]);
+  }, [draft, ready]);
 
   function validateStep(current: Step): string | null {
     if (current === "describe") {
