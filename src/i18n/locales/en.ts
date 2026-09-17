@@ -281,6 +281,21 @@ export const en = {
       health: "Public health",
       other: "Not sure",
     },
+    triage: {
+      autoRoute:
+        "You do not choose a department. Describe the problem and add photos — the assistant reads them and works out which services are responsible.",
+      pending: "Decided automatically after you submit",
+      analysing: "Reading your photos…",
+      resultTitle: "Who will handle this",
+      detected: "Problem type identified",
+      departments: "Responsible services",
+      rolePrimary: "Accountable",
+      roleSupporting: "Also involved",
+      methodAi: "Suggested by the AI assistant from your text and photos.",
+      methodRule: "Demo / rule-based analysis — no live model was available.",
+      reviewNote:
+        "This is a recommendation. An officer confirms or corrects the routing before work starts.",
+    },
     report: {
       title: "Report a Complaint",
       intro:
