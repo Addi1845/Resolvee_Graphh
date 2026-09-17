@@ -708,6 +708,34 @@ function DashboardPage() {
                   ) : null}
                 </div>
 
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenMap((prev) => ({ ...prev, [complaint.id]: !prev[complaint.id] }))
+                    }
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-secondary underline"
+                  >
+                    {openMap[complaint.id] ? t("app.map.single") : t("app.map.locate")}
+                  </button>
+                  {openMap[complaint.id] ? (
+                    <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                      <ComplaintLocation
+                        lat={complaint.issue_lat}
+                        lng={complaint.issue_lng}
+                        title={complaint.title}
+                        subtitle={`${complaint.tracking_code} · ${t(`app.statuses.${complaint.status}`)}`}
+                        band={complaint.priority_band}
+                        locationText={complaint.location_text}
+                        height={240}
+                      />
+                      <ResolutionGraph status={complaint.status} />
+                    </div>
+                  ) : null}
+                </div>
+
+
+
                 <div className="mt-4 flex flex-wrap items-end gap-3">
                   <div className="min-w-56 flex-1">
                     <label
