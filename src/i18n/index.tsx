@@ -76,8 +76,8 @@ type I18nValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   dict: Dictionary;
-  /** Translate a dot-path key to a string. */
-  t: (path: Path) => string;
+  /** Translate a dot-path key to a string, replacing {name} placeholders. */
+  t: (path: Path, vars?: Record<string, string | number>) => string;
   formatDate: (value: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
   formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
 };
@@ -110,11 +110,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       locale,
       setLocale,
       dict,
-      t: (path) => {
+      t: (path, vars) => {
         const found = resolvePath(dict, path);
-        if (typeof found === "string") return found;
         const fallback = resolvePath(en, path);
-        return typeof fallback === "string" ? fallback : path;
+        const text =
+          typeof found === "string" ? found : typeof fallback === "string" ? fallback : path;
+        if (!vars) return text;
+        return text.replace(/\{(\w+)\}/g, (match, key: string) =>
+          key in vars ? String(vars[key]) : match,
+        );
       },
       formatDate: (val, options) =>
         new Intl.DateTimeFormat(INTL_LOCALE[locale], {

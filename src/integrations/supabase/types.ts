@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      attachments: {
+        Row: {
+          byte_size: number
+          complaint_id: string
+          created_at: string
+          id: string
+          kind: string
+          mime_type: string
+          source: string
+          storage_key: string
+        }
+        Insert: {
+          byte_size: number
+          complaint_id: string
+          created_at?: string
+          id?: string
+          kind?: string
+          mime_type: string
+          source?: string
+          storage_key: string
+        }
+        Update: {
+          byte_size?: number
+          complaint_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          mime_type?: string
+          source?: string
+          storage_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaint_updates: {
         Row: {
           actor_name: string | null
@@ -54,67 +95,121 @@ export type Database = {
       }
       complaints: {
         Row: {
+          analysis_method: string
+          analysis_notes: Json
+          analysis_status: string
           category: string
           created_at: string
+          created_by: string | null
           department_id: string | null
           description: string
+          device_accuracy_m: number | null
+          device_lat: number | null
+          device_lng: number | null
+          device_observed_at: string | null
           due_date: string | null
           id: string
+          issue_lat: number | null
+          issue_lng: number | null
           landmark: string | null
           language: string
           latitude: number | null
+          location_policy_version: string
           location_text: string
           longitude: number | null
           priority: string
+          priority_band: string | null
+          priority_factors: Json
+          priority_policy_version: string
+          priority_score: number | null
+          proximity_distance_m: number | null
+          proximity_state: string
           reporter_contact: string | null
           reporter_name: string | null
           reporter_user_id: string | null
           resolution_note: string | null
           status: string
+          suggested_category: string | null
           title: string
           tracking_code: string
           updated_at: string
         }
         Insert: {
+          analysis_method?: string
+          analysis_notes?: Json
+          analysis_status?: string
           category: string
           created_at?: string
+          created_by?: string | null
           department_id?: string | null
           description: string
+          device_accuracy_m?: number | null
+          device_lat?: number | null
+          device_lng?: number | null
+          device_observed_at?: string | null
           due_date?: string | null
           id?: string
+          issue_lat?: number | null
+          issue_lng?: number | null
           landmark?: string | null
           language?: string
           latitude?: number | null
+          location_policy_version?: string
           location_text: string
           longitude?: number | null
           priority?: string
+          priority_band?: string | null
+          priority_factors?: Json
+          priority_policy_version?: string
+          priority_score?: number | null
+          proximity_distance_m?: number | null
+          proximity_state?: string
           reporter_contact?: string | null
           reporter_name?: string | null
           reporter_user_id?: string | null
           resolution_note?: string | null
           status?: string
+          suggested_category?: string | null
           title: string
           tracking_code: string
           updated_at?: string
         }
         Update: {
+          analysis_method?: string
+          analysis_notes?: Json
+          analysis_status?: string
           category?: string
           created_at?: string
+          created_by?: string | null
           department_id?: string | null
           description?: string
+          device_accuracy_m?: number | null
+          device_lat?: number | null
+          device_lng?: number | null
+          device_observed_at?: string | null
           due_date?: string | null
           id?: string
+          issue_lat?: number | null
+          issue_lng?: number | null
           landmark?: string | null
           language?: string
           latitude?: number | null
+          location_policy_version?: string
           location_text?: string
           longitude?: number | null
           priority?: string
+          priority_band?: string | null
+          priority_factors?: Json
+          priority_policy_version?: string
+          priority_score?: number | null
+          proximity_distance_m?: number | null
+          proximity_state?: string
           reporter_contact?: string | null
           reporter_name?: string | null
           reporter_user_id?: string | null
           resolution_note?: string | null
           status?: string
+          suggested_category?: string | null
           title?: string
           tracking_code?: string
           updated_at?: string
