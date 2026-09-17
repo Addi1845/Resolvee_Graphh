@@ -4,7 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Images, RefreshCw } from "lucide-react";
 
 import { useI18n } from "@/i18n";
-import { MapPanel } from "@/components/map/MapPanel";
+import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
+import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
+import { DuplicateClusterPanel, type Cluster } from "@/components/dashboard/DuplicateClusterPanel";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import {
   CATEGORIES,
@@ -13,7 +15,7 @@ import {
   getDepartmentTracking,
   getMyAccess,
   listComplaints,
-  listDuplicateReview,
+  listDuplicateClusters,
   listVerificationQueue,
   recordVerification,
   reviewDuplicateLink,
