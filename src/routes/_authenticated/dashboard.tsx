@@ -154,10 +154,10 @@ function DashboardPage() {
       {summary ? (
         <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: t("app.dashboard.filterAll"), value: summary.total },
-            { label: t("app.analysis.bands.critical"), value: summary.critical },
-            { label: t("app.track.due"), value: summary.overdue },
-            { label: t("app.statuses.in_progress"), value: summary.open },
+            { label: t("app.depts.total"), value: summary.total },
+            { label: t("app.depts.critical"), value: summary.critical },
+            { label: t("app.depts.overdue"), value: summary.overdue },
+            { label: t("app.depts.open"), value: summary.open },
           ].map((card) => (
             <div key={card.label} className="rounded-sm border border-border bg-surface p-4">
               <dt className="text-sm font-semibold text-muted-foreground">{card.label}</dt>
