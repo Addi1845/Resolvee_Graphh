@@ -332,7 +332,7 @@ function DashboardPage() {
       ) : null}
 
       {isStaff ? (
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="mt-8">
           <WorkloadChart
             rows={[
               ...(tracking?.departments ?? []).map((dept) => ({
@@ -341,7 +341,7 @@ function DashboardPage() {
                 overdue: dept.overdue,
                 resolved: dept.resolved,
               })),
-              ...(tracking?.unassigned
+              ...(tracking?.unassigned && scopeAll
                 ? [
                     {
                       name: t("app.depts.unassigned"),
@@ -353,82 +353,23 @@ function DashboardPage() {
                 : []),
             ]}
           />
-          <MapPanel
-            points={complaints
-              .filter((row) => row.issue_lat !== null && row.issue_lng !== null)
-              .map((row) => ({
-                id: row.id,
-                lat: row.issue_lat as number,
-                lng: row.issue_lng as number,
-                title: row.title,
-                subtitle: `${row.tracking_code} · ${t(`app.statuses.${row.status}`)}`,
-                band: row.priority_band,
-              }))}
-            height={360}
-          />
         </div>
       ) : null}
 
-      {isStaff ? (
-        <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
-          <h2 className="text-xl font-bold text-primary">{t("app.review.dupTitle")}</h2>
-          <p className="mt-1 text-base text-muted-foreground">{t("app.review.dupIntro")}</p>
-
-          {duplicates && duplicates.links.length > 0 ? (
-            <ul className="mt-4 space-y-3">
-              {duplicates.links.map((link) => (
-                <li key={link.id} className="rounded-sm border border-border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      {link.complaint?.tracking_code} ↔ {link.related?.tracking_code}
-                    </p>
-                    <span className="rounded-sm bg-info-soft px-3 py-1 text-sm font-bold text-primary">
-                      {t("app.review.dupMatch")}: {Math.round(Number(link.similarity))}/100
-                    </span>
-                  </div>
-                  <p className="mt-2 text-base font-semibold text-foreground">
-                    {link.complaint?.title}
-                  </p>
-                  <p className="text-base text-muted-foreground">{link.related?.title}</p>
-                  {link.reason ? (
-                    <p className="mt-2 text-sm text-muted-foreground">{link.reason}</p>
-                  ) : null}
-                  <p className="mt-2 text-sm font-semibold text-foreground">
-                    {link.state === "confirmed"
-                      ? t("app.review.stateConfirmed")
-                      : link.state === "rejected"
-                        ? t("app.review.stateRejected")
-                        : t("app.review.stateSuggested")}
-                  </p>
-                  {link.state === "suggested" && access?.canUpdate ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={savingId === link.id}
-                        onClick={() => void handleDuplicate(link.id, "confirmed")}
-                        className="inline-flex min-h-11 items-center rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-secondary disabled:opacity-60"
-                      >
-                        {t("app.review.confirm")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingId === link.id}
-                        onClick={() => void handleDuplicate(link.id, "rejected")}
-                        className="inline-flex min-h-11 items-center rounded-sm border border-border-strong px-4 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
-                      >
-                        {t("app.review.reject")}
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-base text-muted-foreground">
-              {loading ? t("app.common.loading") : t("app.review.dupEmpty")}
-            </p>
-          )}
-        </section>
+      {isStaff && canReviewDuplicates ? (
+        <div className="mt-8">
+          <DuplicateClusterPanel
+            clusters={(clusters?.clusters ?? []) as Cluster[]}
+            canReview={access?.canUpdate ?? false}
+            savingId={savingId}
+            loading={loading}
+            onDecide={(linkId, state) => void handleDuplicate(linkId, state)}
+          />
+        </div>
+      ) : isStaff ? (
+        <p className="mt-8 rounded-sm border border-border bg-muted/30 p-4 text-base text-muted-foreground">
+          {t("app.scope.duplicatesHidden")}
+        </p>
       ) : null}
 
       {isStaff ? (
