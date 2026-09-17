@@ -424,6 +424,14 @@ export const mr: Dictionary = {
       noLocation: "या तक्रारीसाठी नकाशावर पिन दिलेला नाही.",
       coords: "पिन: {lat}, {lng}",
     },
+    roles: {
+      citizen: "नागरिक",
+      intake_officer: "इनटेक अधिकारी",
+      field_officer: "क्षेत्र अधिकारी",
+      supervisor: "पर्यवेक्षक",
+      admin: "प्रशासक",
+      auditor: "ऑडिटर (फक्त वाचनासाठी)",
+    },
     scope: {
       title: "तुमचे दृश्य",
       all: "संपूर्ण शहराचे दृश्य: सर्व विभागांच्या तक्रारी.",

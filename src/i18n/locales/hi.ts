@@ -424,6 +424,14 @@ export const hi: Dictionary = {
       noLocation: "इस शिकायत के लिए नक्शे पर कोई पिन साझा नहीं किया गया।",
       coords: "पिन: {lat}, {lng}",
     },
+    roles: {
+      citizen: "नागरिक",
+      intake_officer: "इनटेक अधिकारी",
+      field_officer: "क्षेत्र अधिकारी",
+      supervisor: "पर्यवेक्षक",
+      admin: "प्रशासक",
+      auditor: "ऑडिटर (केवल पढ़ने के लिए)",
+    },
     scope: {
       title: "आपका दृश्य",
       all: "पूरे शहर का दृश्य: सभी विभागों की शिकायतें।",

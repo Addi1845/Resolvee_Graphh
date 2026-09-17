@@ -422,6 +422,14 @@ export const en = {
       noLocation: "The reporter did not share a map pin for this complaint.",
       coords: "Pin: {lat}, {lng}",
     },
+    roles: {
+      citizen: "Citizen",
+      intake_officer: "Intake officer",
+      field_officer: "Field officer",
+      supervisor: "Supervisor",
+      admin: "Administrator",
+      auditor: "Auditor (read only)",
+    },
     scope: {
       title: "Your view",
       all: "City-wide view: complaints from every department.",
