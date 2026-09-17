@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { LogIn, Menu, Network, X } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { LayoutDashboard, LogIn, LogOut, Menu, Network, X } from "lucide-react";
 
 import { AccessibilityControls } from "./AccessibilityControls";
 import { LanguageSelector } from "./LanguageSelector";
 import { useI18n } from "@/i18n";
+import { useSession } from "@/hooks/useSession";
+import { supabase } from "@/integrations/supabase/client";
 
 const NAV_ITEMS = [
   { to: "/", key: "nav.home" },
