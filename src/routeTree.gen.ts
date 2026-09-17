@@ -16,6 +16,7 @@ import { Route as HelpRouteImport } from './routes/help'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ReportRouteImport } from './routes/report'
+import { Route as StaffLoginRouteImport } from './routes/staff-login'
 import { Route as TrackRouteImport } from './routes/track'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedMyComplaintsRouteImport } from './routes/_authenticated/my-complaints'
@@ -54,6 +55,11 @@ const ReportRoute = ReportRouteImport.update({
   path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffLoginRoute = StaffLoginRouteImport.update({
+  id: '/staff-login',
+  path: '/staff-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TrackRoute = TrackRouteImport.update({
   id: '/track',
   path: '/track',
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/report': typeof ReportRoute
+  '/staff-login': typeof StaffLoginRoute
   '/track': typeof TrackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/report': typeof ReportRoute
+  '/staff-login': typeof StaffLoginRoute
   '/track': typeof TrackRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/my-complaints': typeof AuthenticatedMyComplaintsRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/report': typeof ReportRoute
+  '/staff-login': typeof StaffLoginRoute
   '/track': typeof TrackRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/my-complaints': typeof AuthenticatedMyComplaintsRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/report'
+    | '/staff-login'
     | '/track'
     | '/dashboard'
     | '/my-complaints'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/report'
+    | '/staff-login'
     | '/track'
     | '/dashboard'
     | '/my-complaints'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/report'
+    | '/staff-login'
     | '/track'
     | '/_authenticated/dashboard'
     | '/_authenticated/my-complaints'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   ReportRoute: typeof ReportRoute
+  StaffLoginRoute: typeof StaffLoginRoute
   TrackRoute: typeof TrackRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff-login': {
+      id: '/staff-login'
+      path: '/staff-login'
+      fullPath: '/staff-login'
+      preLoaderRoute: typeof StaffLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/track': {
       id: '/track'
       path: '/track'
@@ -250,6 +270,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   ReportRoute: ReportRoute,
+  StaffLoginRoute: StaffLoginRoute,
   TrackRoute: TrackRoute,
 }
 export const routeTree = rootRouteImport

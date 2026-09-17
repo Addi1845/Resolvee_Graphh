@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { LayoutDashboard, LogIn, LogOut, Menu, Network, X } from "lucide-react";
@@ -8,6 +8,7 @@ import { LanguageSelector } from "./LanguageSelector";
 import { useI18n } from "@/i18n";
 import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
+import { getMyAccess } from "@/lib/complaints.functions";
 
 const NAV_ITEMS = [
   { to: "/", key: "nav.home" },
@@ -23,9 +24,26 @@ export function SiteHeader() {
   const { session } = useSession();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [isStaff, setIsStaff] = useState(false);
+
+  // Only officials get the official dashboard link.
+  useEffect(() => {
+    if (!session) {
+      setIsStaff(false);
+      return;
+    }
+    let active = true;
+    void getMyAccess({ data: undefined })
+      .then((result) => active && setIsStaff(result.isStaff))
+      .catch(() => active && setIsStaff(false));
+    return () => {
+      active = false;
+    };
+  }, [session]);
 
   async function handleSignOut() {
     setMenuOpen(false);
+    setIsStaff(false);
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
@@ -67,15 +85,17 @@ export function SiteHeader() {
                 to="/my-complaints"
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
-                {t("app.mine.title")}
+                {t("app.auth.myDashboard")}
               </Link>
+              {isStaff ? (
               <Link
                 to="/dashboard"
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
                 <LayoutDashboard aria-hidden="true" className="size-4" />
-                {t("app.auth.dashboard")}
+                {t("app.auth.staffDashboard")}
               </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={() => void handleSignOut()}
@@ -142,16 +162,18 @@ export function SiteHeader() {
                   onClick={() => setMenuOpen(false)}
                   className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
                 >
-                  {t("app.mine.title")}
+                  {t("app.auth.myDashboard")}
                 </Link>
+                {isStaff ? (
                 <Link
                   to="/dashboard"
                   onClick={() => setMenuOpen(false)}
                   className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
                 >
                   <LayoutDashboard aria-hidden="true" className="size-4" />
-                  {t("app.auth.dashboard")}
+                  {t("app.auth.staffDashboard")}
                 </Link>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => void handleSignOut()}

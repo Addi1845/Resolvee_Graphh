@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Images, RefreshCw } from "lucide-react";
 
@@ -8,6 +8,7 @@ import {
   CATEGORIES,
   STATUSES,
   getComplaintEvidence,
+  getDepartmentTracking,
   getMyAccess,
   listComplaints,
   updateComplaintStatus,
@@ -33,6 +34,9 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 type ListResult = Awaited<ReturnType<typeof listComplaints>>;
+type Access = Awaited<ReturnType<typeof getMyAccess>>;
+type Tracking = Awaited<ReturnType<typeof getDepartmentTracking>>;
+type TrackingRow = Tracking["departments"][number];
 type Complaint = ListResult["complaints"][number];
 type PriorityFactor = { code: string; value: number | null; weight: number; reason: string };
 
@@ -47,15 +51,18 @@ const bandClass: Record<string, string> = {
 };
 
 function DashboardPage() {
-  const { t, formatDate } = useI18n();
+  const { t, locale, formatDate } = useI18n();
   const fetchList = useServerFn(listComplaints);
   const fetchAccess = useServerFn(getMyAccess);
   const fetchEvidence = useServerFn(getComplaintEvidence);
   const saveStatus = useServerFn(updateComplaintStatus);
 
-  const [roles, setRoles] = useState<string[] | null>(null);
+  const fetchTracking = useServerFn(getDepartmentTracking);
+
+  const [access, setAccess] = useState<Access | null>(null);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [summary, setSummary] = useState<ListResult["summary"] | null>(null);
+  const [tracking, setTracking] = useState<Tracking | null>(null);
   const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
   const [sort, setSort] = useState("priority");
@@ -66,27 +73,40 @@ function DashboardPage() {
   const [openWhy, setOpenWhy] = useState<Record<string, boolean>>({});
   const [evidence, setEvidence] = useState<Record<string, { id: string; url: string }[]>>({});
 
+  const isStaff = access?.isStaff ?? false;
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await fetchList({ data: { status, search, category, sort } });
+      const [result, departmentResult] = await Promise.all([
+        fetchList({ data: { status, search, category, sort } }),
+        fetchTracking({ data: undefined }),
+      ]);
       setComplaints(result.complaints);
       setSummary(result.summary);
+      setTracking(departmentResult);
     } finally {
       setLoading(false);
     }
-  }, [fetchList, status, search, category, sort]);
+  }, [fetchList, fetchTracking, status, search, category, sort]);
 
   useEffect(() => {
-    void fetchAccess({ data: undefined }).then((result) => setRoles(result.roles));
+    void fetchAccess({ data: undefined }).then(setAccess);
   }, [fetchAccess]);
 
   useEffect(() => {
+    if (!isStaff) {
+      setLoading(false);
+      return;
+    }
     void load();
-  }, [load]);
+  }, [isStaff, load]);
 
-  const isStaff = roles?.some((role) => role !== "citizen") ?? false;
   const today = new Date().toISOString().slice(0, 10);
+
+  function departmentName(dept: TrackingRow) {
+    return locale === "hi" ? dept.name_hi : locale === "mr" ? dept.name_mr : dept.name_en;
+  }
 
   async function handleUpdate(id: string, next: string) {
     setSavingId(id);
@@ -105,27 +125,39 @@ function DashboardPage() {
     setEvidence((prev) => ({ ...prev, [id]: result.photos }));
   }
 
-  return (
-    <div className="mx-auto max-w-6xl px-4 py-12">
-      <h1 className="text-3xl font-bold text-primary">{t("app.dashboard.title")}</h1>
-      <p className="mt-2 text-base text-muted-foreground">{t("app.dashboard.intro")}</p>
-
-      {roles && !isStaff ? (
+  // Citizens never see the official queue, only a pointer to their own area.
+  if (access && !isStaff) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <h1 className="text-3xl font-bold text-primary">{t("app.dashboard.title")}</h1>
         <div className="mt-6 rounded-sm border border-warning/40 bg-warning-soft p-5">
           <p className="text-base font-bold text-warning-foreground">
             {t("app.dashboard.noAccess")}
           </p>
           <p className="mt-1 text-base text-foreground">{t("app.dashboard.noAccessText")}</p>
         </div>
-      ) : null}
+        <Link
+          to="/my-complaints"
+          className="mt-6 inline-flex min-h-12 items-center rounded-sm bg-primary px-6 text-base font-semibold text-primary-foreground hover:bg-secondary"
+        >
+          {t("app.auth.myDashboard")}
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      <h1 className="text-3xl font-bold text-primary">{t("app.dashboard.title")}</h1>
+      <p className="mt-2 text-base text-muted-foreground">{t("app.dashboard.intro")}</p>
 
       {summary ? (
         <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: t("app.dashboard.filterAll"), value: summary.total },
-            { label: t("app.analysis.bands.critical"), value: summary.critical },
-            { label: t("app.track.due"), value: summary.overdue },
-            { label: t("app.statuses.in_progress"), value: summary.open },
+            { label: t("app.depts.total"), value: summary.total },
+            { label: t("app.depts.critical"), value: summary.critical },
+            { label: t("app.depts.overdue"), value: summary.overdue },
+            { label: t("app.depts.open"), value: summary.open },
           ].map((card) => (
             <div key={card.label} className="rounded-sm border border-border bg-surface p-4">
               <dt className="text-sm font-semibold text-muted-foreground">{card.label}</dt>
@@ -134,6 +166,79 @@ function DashboardPage() {
           ))}
         </dl>
       ) : null}
+
+      {isStaff ? (
+        <section className="mt-10 rounded-sm border border-border bg-surface p-5 shadow-card">
+          <h2 className="text-xl font-bold text-primary">{t("app.depts.title")}</h2>
+          <p className="mt-1 text-base text-muted-foreground">{t("app.depts.intro")}</p>
+
+          {tracking && (tracking.departments.length > 0 || tracking.unassigned) ? (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[34rem] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-border text-sm text-muted-foreground">
+                    <th scope="col" className="py-2 pr-3 font-semibold">
+                      {t("app.depts.department")}
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">
+                      {t("app.depts.total")}
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">
+                      {t("app.depts.open")}
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">
+                      {t("app.depts.overdue")}
+                    </th>
+                    <th scope="col" className="py-2 pr-3 font-semibold">
+                      {t("app.depts.critical")}
+                    </th>
+                    <th scope="col" className="py-2 font-semibold">
+                      {t("app.depts.resolved")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tracking.departments.map((dept) => (
+                    <tr key={dept.id} className="border-b border-border/70 text-base">
+                      <th scope="row" className="py-2.5 pr-3 font-semibold text-foreground">
+                        {departmentName(dept)}
+                      </th>
+                      <td className="py-2.5 pr-3">{dept.total}</td>
+                      <td className="py-2.5 pr-3 font-semibold text-primary">{dept.open}</td>
+                      <td
+                        className={`py-2.5 pr-3 font-semibold ${dept.overdue > 0 ? "text-destructive-foreground" : "text-muted-foreground"}`}
+                      >
+                        {dept.overdue}
+                      </td>
+                      <td className="py-2.5 pr-3">{dept.critical}</td>
+                      <td className="py-2.5">{dept.resolved}</td>
+                    </tr>
+                  ))}
+                  {tracking.unassigned ? (
+                    <tr className="text-base">
+                      <th scope="row" className="py-2.5 pr-3 font-semibold text-muted-foreground">
+                        {t("app.depts.unassigned")}
+                      </th>
+                      <td className="py-2.5 pr-3">{tracking.unassigned.total}</td>
+                      <td className="py-2.5 pr-3 font-semibold text-primary">
+                        {tracking.unassigned.open}
+                      </td>
+                      <td className="py-2.5 pr-3">{tracking.unassigned.overdue}</td>
+                      <td className="py-2.5 pr-3">{tracking.unassigned.critical}</td>
+                      <td className="py-2.5">{tracking.unassigned.resolved}</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-4 text-base text-muted-foreground">
+              {loading ? t("app.common.loading") : t("app.depts.empty")}
+            </p>
+          )}
+        </section>
+      ) : null}
+
 
       <div className="mt-8 flex flex-wrap items-end gap-3">
         <div>
