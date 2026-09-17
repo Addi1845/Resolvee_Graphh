@@ -67,7 +67,7 @@ export function AccessibilityProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<A11yValue>(
     () => ({
-      scale: STEPS[index],
+      scale: STEPS[index] ?? STEPS[0],
       canIncrease: index < STEPS.length - 1,
       canDecrease: index > 0,
       increase,
