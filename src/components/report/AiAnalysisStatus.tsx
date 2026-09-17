@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Brain, Check, Loader2 } from "lucide-react";
 import { useI18n } from "@/i18n";
 
 const STAGE_MS = 4500;
@@ -35,9 +35,7 @@ export function AiAnalysisStatus() {
       className="rounded-md border border-primary/30 bg-primary-soft/40 px-5 py-4"
     >
       <p className="flex items-center gap-2 text-base font-bold text-foreground">
-        <span aria-hidden="true" className="animate-pulse text-xl">
-          🧠
-        </span>
+        <Brain aria-hidden="true" className="size-5 animate-pulse text-primary" />
         {t("app.triage.working")}
       </p>
       <ul className="mt-3 space-y-2">
