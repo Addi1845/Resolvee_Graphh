@@ -209,6 +209,40 @@ function DashboardPage() {
       <h1 className="text-3xl font-bold text-primary">{t("app.dashboard.title")}</h1>
       <p className="mt-2 text-base text-muted-foreground">{t("app.dashboard.intro")}</p>
 
+      {isStaff ? (
+        <section className="mt-5 rounded-sm border border-secondary/40 bg-info-soft p-4">
+          <p className="text-sm font-bold uppercase tracking-wider text-primary">
+            {t("app.scope.title")}
+          </p>
+          <p className="mt-1 text-base font-semibold text-foreground">
+            {t("app.scope.role", {
+              role: (access?.roles ?? [])
+                .filter((role) => role !== "citizen")
+                .map((role) => t(`app.roles.${role}`))
+                .join(", "),
+            })}
+          </p>
+          <p className="mt-1 text-base text-foreground">
+            {scopeAll
+              ? t("app.scope.all")
+              : scopeDepartments.length === 0
+                ? t("app.scope.none")
+                : t("app.scope.limited", {
+                    dept: scopeDepartments
+                      .map((dept) =>
+                        locale === "hi"
+                          ? dept.name_hi
+                          : locale === "mr"
+                            ? dept.name_mr
+                            : dept.name_en,
+                      )
+                      .join(", "),
+                  })}
+          </p>
+        </section>
+      ) : null}
+
+
       {summary ? (
         <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
