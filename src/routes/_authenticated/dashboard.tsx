@@ -479,6 +479,10 @@ function DashboardPage() {
             </div>
           ) : null}
         </section>
+      ) : isStaff ? (
+        <p className="mt-8 rounded-sm border border-border bg-muted/30 p-4 text-base text-muted-foreground">
+          {t("app.scope.verifyHidden")}
+        </p>
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-end gap-3">
@@ -511,7 +515,10 @@ function DashboardPage() {
             className={`mt-1.5 ${fieldClass}`}
           >
             <option value="">{t("app.dashboard.filterAll")}</option>
-            {CATEGORIES.map((item) => (
+            {(scopeAll
+              ? (CATEGORIES as readonly string[])
+              : scopeDepartments.map((dept) => dept.code)
+            ).map((item) => (
               <option key={item} value={item}>
                 {t(`app.categories.${item}`)}
               </option>
