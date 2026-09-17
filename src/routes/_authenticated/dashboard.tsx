@@ -386,6 +386,16 @@ function DashboardPage() {
                   </p>
                   <p className="mt-1 text-base font-semibold text-foreground">{item.title}</p>
                   <p className="text-sm text-muted-foreground">{item.location_text}</p>
+                  <div className="mt-3">
+                    <ComplaintLocation
+                      lat={item.issue_lat}
+                      lng={item.issue_lng}
+                      title={item.title}
+                      subtitle={item.tracking_code}
+                      locationText={item.location_text}
+                      height={200}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => void loadEvidence(item.id)}
