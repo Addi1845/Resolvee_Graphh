@@ -155,6 +155,12 @@ export function SiteHeader() {
               </Link>
             </li>
           ))}
+          <li className="border-t border-primary-foreground/15 px-3 py-2 sm:hidden">
+            <div className="flex flex-wrap items-center gap-2">
+              <LanguageSelector />
+              <AccessibilityControls />
+            </div>
+          </li>
           <li className="md:hidden">
             {session ? (
               <div className="flex flex-col">
