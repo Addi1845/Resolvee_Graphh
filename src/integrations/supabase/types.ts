@@ -55,6 +55,57 @@ export type Database = {
           },
         ]
       }
+      complaint_departments: {
+        Row: {
+          complaint_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          department_id: string
+          id: string
+          reason: string | null
+          role: string
+          source: string
+        }
+        Insert: {
+          complaint_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          department_id: string
+          id?: string
+          reason?: string | null
+          role: string
+          source?: string
+        }
+        Update: {
+          complaint_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          department_id?: string
+          id?: string
+          reason?: string | null
+          role?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_departments_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaint_departments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaint_updates: {
         Row: {
           actor_name: string | null

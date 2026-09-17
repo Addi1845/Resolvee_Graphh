@@ -63,6 +63,7 @@ function TrackPage() {
 
 
   const complaint = result?.found ? result.complaint : null;
+  const routed = result?.found ? (result.routedDepartments ?? []) : [];
   const department = complaint?.departments;
   const departmentName = department
     ? locale === "hi"
@@ -173,8 +174,52 @@ function TrackPage() {
             </div>
           ) : null}
 
+          {routed.length > 0 ? (
+            <div className="mt-6 rounded-sm border border-border bg-surface p-4">
+              <p className="text-sm font-semibold text-foreground">
+                {t("app.triage.departments")}
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {routed.map((entry, index) => {
+                  const dept = entry.departments;
+                  const name = !dept
+                    ? "—"
+                    : locale === "hi"
+                      ? dept.name_hi
+                      : locale === "mr"
+                        ? dept.name_mr
+                        : dept.name_en;
+                  return (
+                    <li
+                      key={`${dept?.code ?? index}`}
+                      className="flex items-center gap-2 rounded-sm border border-border px-3 py-1.5 text-sm text-foreground"
+                    >
+                      {name}
+                      <span
+                        className={`rounded-sm px-2 py-0.5 text-xs font-semibold ${
+                          entry.role === "primary"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {entry.role === "primary"
+                          ? t("app.triage.rolePrimary")
+                          : t("app.triage.roleSupporting")}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-2 text-sm text-muted-foreground">{t("app.triage.reviewNote")}</p>
+            </div>
+          ) : null}
+
           <div className="mt-6 rounded-sm border border-border bg-muted/40 p-4 text-sm">
-            <p className="font-semibold text-foreground">{t("app.analysis.demoLabel")}</p>
+            <p className="font-semibold text-foreground">
+              {complaint.analysis_method === "ai_vision"
+                ? t("app.triage.methodAi")
+                : t("app.analysis.demoLabel")}
+            </p>
             <p className="mt-1 text-muted-foreground">
               {t("app.analysis.priority")}:{" "}
               {complaint.priority_band

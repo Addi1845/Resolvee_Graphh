@@ -39,7 +39,6 @@ export type PhotoInput = {
 };
 
 export type ComplaintInput = {
-  category: string;
   title: string;
   description: string;
   language: string;
@@ -130,9 +129,6 @@ async function requireStaff(context: AuthedContext): Promise<string[]> {
 
 export const submitComplaint = createServerFn({ method: "POST" })
   .inputValidator((input: ComplaintInput) => {
-    const category = CATEGORIES.includes(input.category as (typeof CATEGORIES)[number])
-      ? input.category
-      : "other";
     const title = str(input.title, 160);
     const description = str(input.description, 4000);
     const locationText = str(input.locationText, 300);
@@ -155,7 +151,6 @@ export const submitComplaint = createServerFn({ method: "POST" })
       : null;
 
     return {
-      category,
       title,
       description,
       locationText,
@@ -171,13 +166,9 @@ export const submitComplaint = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { triageComplaint } = await import("@/lib/ai-triage.server");
+    const { resolveDepartments, ROUTING_POLICY_VERSION } = await import("@/lib/routing");
     const userId = await optionalUserId();
-
-    const { data: dept } = await supabaseAdmin
-      .from("departments")
-      .select("id")
-      .eq("code", data.category)
-      .maybeSingle();
 
     const issuePoint =
       data.issueLat !== null && data.issueLng !== null
@@ -185,11 +176,28 @@ export const submitComplaint = createServerFn({ method: "POST" })
         : null;
     const proximity = evaluateProximity(issuePoint, data.device);
 
-    const analysisText = `${data.title} ${data.description} ${data.landmark}`;
-    const suggestion = suggestCategory(analysisText);
-    const priority = assessPriority({
-      category: data.category,
+    const analysisText = `${data.title}\n${data.description}\nLocation: ${data.locationText} ${data.landmark}`;
+
+    // The citizen never picks a department. The model reads the text and the
+    // photos, and the routing policy turns its category codes into departments.
+    const triage = await triageComplaint({
       text: analysisText,
+      photoDataUrls: data.photos.map((photo) => photo.dataUrl),
+    });
+
+    const routed = resolveDepartments(triage.category, triage.supportingCategories);
+    const { data: departmentRows } = await supabaseAdmin
+      .from("departments")
+      .select("id, code")
+      .in("code", routed.map((entry) => entry.code));
+    const departmentIdByCode = new Map(
+      (departmentRows ?? []).map((row) => [row.code, row.id] as const),
+    );
+    const primaryDepartmentId = departmentIdByCode.get(triage.category) ?? null;
+
+    const priority = assessPriority({
+      category: triage.category,
+      text: `${analysisText} ${triage.hazards.join(" ")}`,
       hasPhotos: data.photos.length > 0,
     });
 
@@ -202,7 +210,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
         .from("complaints")
         .insert({
           tracking_code: trackingCode,
-          category: data.category,
+          category: triage.category,
           title: data.title,
           description: data.description,
           language: data.language,
@@ -210,7 +218,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
           landmark: data.landmark || null,
           reporter_name: data.reporterName || null,
           reporter_contact: data.reporterContact || null,
-          department_id: dept?.id ?? null,
+          department_id: primaryDepartmentId,
           due_date: due.toISOString().slice(0, 10),
           created_by: userId,
           issue_lat: data.issueLat,
@@ -223,9 +231,18 @@ export const submitComplaint = createServerFn({ method: "POST" })
           proximity_distance_m: proximity.distanceM,
           location_policy_version: LOCATION_POLICY.version,
           analysis_status: "completed",
-          analysis_method: "rule_based_demo",
-          suggested_category: suggestion.category,
-          analysis_notes: { matched_terms: suggestion.matched, needs_review: true },
+          analysis_method: triage.method,
+          suggested_category: triage.category,
+          analysis_notes: {
+            summary: triage.summary,
+            hazards: triage.hazards,
+            severity: triage.severity,
+            supporting_categories: triage.supportingCategories,
+            supporting_evidence: triage.evidence,
+            needs_review: triage.needsReview,
+            routing_policy_version: ROUTING_POLICY_VERSION,
+            fallback_note: triage.note ?? null,
+          },
           priority_score: priority.score,
           priority_band: priority.band,
           priority_factors: {
@@ -245,6 +262,21 @@ export const submitComplaint = createServerFn({ method: "POST" })
           status: "submitted",
           note: "Complaint received through the citizen portal.",
         });
+
+        // Record every responsible department: one accountable owner plus the
+        // services expected to contribute. Staff can correct this in review.
+        const routingRows = routed
+          .map((entry) => ({
+            complaint_id: row.id,
+            department_id: departmentIdByCode.get(entry.code) ?? null,
+            role: entry.role,
+            source: triage.method === "ai_vision" ? "ai_suggested" : "rule_based_demo",
+            reason: entry.reason,
+          }))
+          .filter((entry) => entry.department_id !== null);
+        if (routingRows.length > 0) {
+          await supabaseAdmin.from("complaint_departments").insert(routingRows as never);
+        }
 
         let stored = 0;
         for (const photo of data.photos) {
@@ -279,7 +311,11 @@ export const submitComplaint = createServerFn({ method: "POST" })
           proximityState: proximity.state,
           priorityBand: priority.band,
           priorityScore: priority.score,
-          suggestedCategory: suggestion.category,
+          detectedCategory: triage.category,
+          analysisMethod: triage.method,
+          needsReview: triage.needsReview,
+          hazards: triage.hazards,
+          departments: routed.map((entry) => ({ code: entry.code, role: entry.role })),
           urgentReview: priority.urgentReviewFlag,
         };
       }
@@ -333,9 +369,22 @@ export const trackComplaint = createServerFn({ method: "POST" })
       .eq("complaint_id", complaint.id)
       .order("created_at", { ascending: true });
 
+    const { data: routed } = await supabaseAdmin
+      .from("complaint_departments")
+      .select("role, reason, departments(code, name_en, name_hi, name_mr)")
+      .eq("complaint_id", complaint.id);
+
     const photos = await signedPhotoUrls(complaint.id);
     const { id: _id, ...safe } = complaint;
-    return { found: true as const, complaint: safe, updates: updates ?? [], photos };
+    return {
+      found: true as const,
+      complaint: safe,
+      updates: updates ?? [],
+      photos,
+      routedDepartments: (routed ?? []).sort((a, b) =>
+        a.role === b.role ? 0 : a.role === "primary" ? -1 : 1,
+      ),
+    };
   });
 
 export const listMyComplaints = createServerFn({ method: "POST" })

@@ -6,7 +6,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { LocationStep, type LocationDraft } from "@/components/report/LocationStep";
 import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
-import { CATEGORIES, submitComplaint } from "@/lib/complaints.functions";
+import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 
 export const Route = createFileRoute("/report")({
@@ -39,7 +39,6 @@ type Step = (typeof STEPS)[number];
 const DRAFT_KEY = "resolvegraph.report.draft";
 
 type Draft = {
-  category: string;
   title: string;
   description: string;
   reporterName: string;
@@ -48,7 +47,6 @@ type Draft = {
 };
 
 const emptyDraft: Draft = {
-  category: "water",
   title: "",
   description: "",
   reporterName: "",
@@ -66,7 +64,14 @@ function ReportPage() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ code: string; photos: number } | null>(null);
+  const [result, setResult] = useState<{
+    code: string;
+    photos: number;
+    category: string;
+    method: string;
+    needsReview: boolean;
+    departments: { code: string; role: string }[];
+  } | null>(null);
 
   // Restore the saved draft before the fields become editable, so a restore
   // never overwrites something the person has already started typing.
@@ -129,7 +134,6 @@ function ReportPage() {
     try {
       const response = await submit({
         data: {
-          category: draft.category,
           title: draft.title,
           description: draft.description,
           language: locale,
@@ -147,7 +151,14 @@ function ReportPage() {
           })),
         },
       });
-      setResult({ code: response.trackingCode, photos: response.photosStored });
+      setResult({
+        code: response.trackingCode,
+        photos: response.photosStored,
+        category: response.detectedCategory,
+        method: response.analysisMethod,
+        needsReview: response.needsReview,
+        departments: response.departments,
+      });
       window.localStorage.removeItem(DRAFT_KEY);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "";
@@ -178,6 +189,45 @@ function ReportPage() {
             {result.code}
           </p>
         </div>
+
+        <section className="mt-6 rounded-sm border border-border bg-surface p-5">
+          <h2 className="text-lg font-bold text-primary">{t("app.triage.resultTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {result.method === "ai_vision"
+              ? t("app.triage.methodAi")
+              : t("app.triage.methodRule")}
+          </p>
+          <p className="mt-3 text-base text-foreground">
+            <span className="font-semibold">{t("app.triage.detected")}: </span>
+            {t(`app.categories.${result.category}`)}
+          </p>
+          <p className="mt-3 text-sm font-semibold text-foreground">
+            {t("app.triage.departments")}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {result.departments.map((dept) => (
+              <li
+                key={dept.code}
+                className="flex flex-wrap items-center gap-2 rounded-sm border border-border px-3 py-2 text-base text-foreground"
+              >
+                {t(`app.categories.${dept.code}`)}
+                <span
+                  className={`rounded-sm px-2 py-0.5 text-xs font-semibold ${
+                    dept.role === "primary"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {dept.role === "primary"
+                    ? t("app.triage.rolePrimary")
+                    : t("app.triage.roleSupporting")}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-muted-foreground">{t("app.triage.reviewNote")}</p>
+        </section>
+
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             to="/track"
@@ -244,22 +294,8 @@ function ReportPage() {
       <div className="mt-8 space-y-5">
         {step === "describe" ? (
           <>
-            <div>
-              <label htmlFor="category" className="text-sm font-semibold text-foreground">
-                {t("app.report.category")}
-              </label>
-              <select
-                id="category"
-                value={draft.category}
-                onChange={(event) => setDraft({ ...draft, category: event.target.value })}
-                className={fieldClass}
-              >
-                {CATEGORIES.map((item) => (
-                  <option key={item} value={item}>
-                    {t(`app.categories.${item}`)}
-                  </option>
-                ))}
-              </select>
+            <div className="rounded-sm border border-info/40 bg-info-soft p-4 text-sm text-foreground">
+              {t("app.triage.autoRoute")}
             </div>
             <div>
               <label htmlFor="title" className="text-sm font-semibold text-foreground">
@@ -351,7 +387,7 @@ function ReportPage() {
             <p className="text-muted-foreground">{t("app.wizard.reviewIntro")}</p>
             <dl className="divide-y divide-border rounded-sm border border-border bg-surface">
               {[
-                { label: t("app.report.category"), value: t(`app.categories.${draft.category}`) },
+                { label: t("app.report.category"), value: t("app.triage.pending") },
                 { label: t("app.report.titleLabel"), value: draft.title },
                 { label: t("app.report.descLabel"), value: draft.description },
                 { label: t("app.report.locationLabel"), value: draft.location.locationText },
@@ -415,7 +451,7 @@ function ReportPage() {
               className="inline-flex min-h-12 items-center gap-2 rounded-sm bg-primary px-6 text-base font-semibold text-primary-foreground hover:bg-secondary disabled:opacity-60"
             >
               <Send aria-hidden="true" className="size-4" />
-              {busy ? t("app.report.submitting") : t("app.report.submit")}
+              {busy ? t("app.triage.analysing") : t("app.report.submit")}
             </button>
           ) : (
             <button
