@@ -520,7 +520,7 @@ export const listComplaints = createServerFn({ method: "POST" })
     let query = context.supabase
       .from("complaints")
       .select(
-        "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, priority_factors, suggested_category, analysis_method, proximity_state, proximity_distance_m, due_date, reporter_name, reporter_contact, created_at",
+        "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, priority_factors, suggested_category, analysis_method, proximity_state, proximity_distance_m, issue_lat, issue_lng, due_date, reporter_name, reporter_contact, created_at",
       )
       .limit(100);
 
@@ -809,4 +809,62 @@ export const recordVerification = createServerFn({ method: "POST" })
     });
 
     return { ok: true, status: nextStatus };
+  });
+
+/**
+ * Full officer report for one complaint, opened from the queue.
+ * Staff only: citizens use the public tracking page for their own reports.
+ */
+export const getComplaintDetail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { code: string }) => ({ code: str(input.code, 40).toUpperCase() }))
+  .handler(async ({ data, context }) => {
+    await requireStaff(context);
+
+    const { data: complaint } = await context.supabase
+      .from("complaints")
+      .select(
+        "id, tracking_code, category, title, description, language, location_text, landmark, status, priority, priority_score, priority_band, priority_factors, priority_policy_version, analysis_method, analysis_notes, suggested_category, proximity_state, proximity_distance_m, issue_lat, issue_lng, due_date, resolution_note, reporter_name, reporter_contact, created_at, updated_at, departments(code, name_en, name_hi, name_mr)",
+      )
+      .eq("tracking_code", data.code)
+      .maybeSingle();
+
+    if (!complaint) return { found: false as const };
+
+    const [{ data: updates }, { data: routed }, { data: duplicates }, { data: verifications }] =
+      await Promise.all([
+        context.supabase
+          .from("complaint_updates")
+          .select("status, note, actor_name, created_at")
+          .eq("complaint_id", complaint.id)
+          .order("created_at", { ascending: true }),
+        context.supabase
+          .from("complaint_departments")
+          .select("role, reason, source, departments(code, name_en, name_hi, name_mr)")
+          .eq("complaint_id", complaint.id),
+        context.supabase
+          .from("complaint_duplicates")
+          .select(
+            "id, similarity, reason, state, related:complaints!complaint_duplicates_related_complaint_id_fkey(tracking_code, title)",
+          )
+          .eq("complaint_id", complaint.id)
+          .order("similarity", { ascending: false }),
+        context.supabase
+          .from("complaint_verifications")
+          .select("decision, note, reviewer_name, created_at")
+          .eq("complaint_id", complaint.id)
+          .order("created_at", { ascending: false }),
+      ]);
+
+    return {
+      found: true as const,
+      complaint,
+      updates: updates ?? [],
+      routedDepartments: (routed ?? []).sort((a: { role: string }, b: { role: string }) =>
+        a.role === b.role ? 0 : a.role === "primary" ? -1 : 1,
+      ),
+      duplicates: duplicates ?? [],
+      verifications: verifications ?? [],
+      photos: await signedPhotoUrls(complaint.id),
+    };
   });

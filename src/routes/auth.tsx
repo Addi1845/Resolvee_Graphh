@@ -5,6 +5,8 @@ import { LogIn } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { DemoAccountPicker } from "@/components/auth/DemoAccountPicker";
+import { DEMO_CITIZEN_ACCOUNTS } from "@/lib/demo-accounts";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -37,6 +39,7 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [demoSelected, setDemoSelected] = useState<string | null>(null);
 
   useEffect(() => {
     void supabase.auth.getSession().then(({ data }) => {
@@ -176,6 +179,18 @@ function AuthPage() {
           {t("app.auth.toStaff")}
         </Link>
       </div>
+
+      <DemoAccountPicker
+        accounts={DEMO_CITIZEN_ACCOUNTS}
+        selected={demoSelected}
+        onSelect={(demoEmail, demoPassword) => {
+          setMode("in");
+          setEmail(demoEmail);
+          setPassword(demoPassword);
+          setDemoSelected(demoEmail);
+          setError(null);
+        }}
+      />
     </div>
   );
 }

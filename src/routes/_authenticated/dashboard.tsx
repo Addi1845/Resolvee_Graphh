@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Images, RefreshCw } from "lucide-react";
 
 import { useI18n } from "@/i18n";
+import { MapPanel } from "@/components/map/MapPanel";
+import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import {
   CATEGORIES,
   STATUSES,
@@ -287,6 +289,44 @@ function DashboardPage() {
       ) : null}
 
       {isStaff ? (
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <WorkloadChart
+            rows={[
+              ...(tracking?.departments ?? []).map((dept) => ({
+                name: departmentName(dept),
+                open: dept.open,
+                overdue: dept.overdue,
+                resolved: dept.resolved,
+              })),
+              ...(tracking?.unassigned
+                ? [
+                    {
+                      name: t("app.depts.unassigned"),
+                      open: tracking.unassigned.open,
+                      overdue: tracking.unassigned.overdue,
+                      resolved: tracking.unassigned.resolved,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+          <MapPanel
+            points={complaints
+              .filter((row) => row.issue_lat !== null && row.issue_lng !== null)
+              .map((row) => ({
+                id: row.id,
+                lat: row.issue_lat as number,
+                lng: row.issue_lng as number,
+                title: row.title,
+                subtitle: `${row.tracking_code} · ${t(`app.statuses.${row.status}`)}`,
+                band: row.priority_band,
+              }))}
+            height={360}
+          />
+        </div>
+      ) : null}
+
+      {isStaff ? (
         <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
           <h2 className="text-xl font-bold text-primary">{t("app.review.dupTitle")}</h2>
           <p className="mt-1 text-base text-muted-foreground">{t("app.review.dupIntro")}</p>
@@ -565,7 +605,22 @@ function DashboardPage() {
                   </div>
                 </div>
 
-                <h2 className="mt-1 text-xl font-bold text-primary">{complaint.title}</h2>
+                <h2 className="mt-1 text-xl font-bold text-primary">
+                  <Link
+                    to="/complaints/$code"
+                    params={{ code: complaint.tracking_code }}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {complaint.title}
+                  </Link>
+                </h2>
+                <Link
+                  to="/complaints/$code"
+                  params={{ code: complaint.tracking_code }}
+                  className="mt-1 inline-block text-sm font-semibold text-secondary underline"
+                >
+                  {t("app.dashboard.openReport")}
+                </Link>
                 <p className="mt-2 whitespace-pre-line text-base text-foreground">
                   {complaint.description}
                 </p>
