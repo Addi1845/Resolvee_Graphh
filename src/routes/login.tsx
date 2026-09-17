@@ -1,23 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { StagePage } from "@/components/pages/StagePage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({
-    meta: [
-      { title: "Officer Login — ResolveGraph AI" },
-      {
-        name: "description",
-        content:
-          "Sign in for intake officers, field officers, supervisors, administrators and auditors of the ResolveGraph AI platform.",
-      },
-      { property: "og:title", content: "Officer Login — ResolveGraph AI" },
-      { property: "og:description", content: "Staff sign-in for ResolveGraph AI." },
-    ],
-  }),
-  component: LoginPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/auth", replace: true });
+  },
 });
-
-function LoginPage() {
-  return <StagePage titleKey="pages.login.title" introKey="pages.login.intro" />;
-}
