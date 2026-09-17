@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type ListResult = Awaited<ReturnType<typeof listComplaints>>;
 type Access = Awaited<ReturnType<typeof getMyAccess>>;
 type Tracking = Awaited<ReturnType<typeof getDepartmentTracking>>;
-type Duplicates = Awaited<ReturnType<typeof listDuplicateReview>>;
+type Clusters = Awaited<ReturnType<typeof listDuplicateClusters>>;
 type Verification = Awaited<ReturnType<typeof listVerificationQueue>>;
 type TrackingRow = Tracking["departments"][number];
 type Complaint = ListResult["complaints"][number];
@@ -68,12 +68,12 @@ function DashboardPage() {
   const saveStatus = useServerFn(updateComplaintStatus);
 
   const fetchTracking = useServerFn(getDepartmentTracking);
-  const fetchDuplicates = useServerFn(listDuplicateReview);
+  const fetchClusters = useServerFn(listDuplicateClusters);
   const fetchVerification = useServerFn(listVerificationQueue);
   const saveDuplicate = useServerFn(reviewDuplicateLink);
   const saveVerification = useServerFn(recordVerification);
 
-  const [duplicates, setDuplicates] = useState<Duplicates | null>(null);
+  const [clusters, setClusters] = useState<Clusters | null>(null);
   const [verification, setVerification] = useState<Verification | null>(null);
   const [verifyNotes, setVerifyNotes] = useState<Record<string, string>>({});
   const [access, setAccess] = useState<Access | null>(null);
@@ -88,23 +88,28 @@ function DashboardPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [openWhy, setOpenWhy] = useState<Record<string, boolean>>({});
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const [evidence, setEvidence] = useState<Record<string, { id: string; url: string }[]>>({});
 
   const isStaff = access?.isStaff ?? false;
+  const canReviewDuplicates = access?.canReviewDuplicates ?? false;
+  const canVerify = access?.canVerify ?? false;
+  const scopeAll = access?.scopeAll ?? false;
+  const scopeDepartments = access?.scopeDepartments ?? [];
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [result, departmentResult, duplicateResult, verificationResult] = await Promise.all([
+      const [result, departmentResult, clusterResult, verificationResult] = await Promise.all([
         fetchList({ data: { status, search, category, sort } }),
         fetchTracking({ data: undefined }),
-        fetchDuplicates({ data: undefined }),
-        fetchVerification({ data: undefined }),
+        canReviewDuplicates ? fetchClusters({ data: undefined }) : Promise.resolve(null),
+        canVerify ? fetchVerification({ data: undefined }) : Promise.resolve(null),
       ]);
       setComplaints(result.complaints);
       setSummary(result.summary);
       setTracking(departmentResult);
-      setDuplicates(duplicateResult);
+      setClusters(clusterResult);
       setVerification(verificationResult);
     } finally {
       setLoading(false);
@@ -112,8 +117,10 @@ function DashboardPage() {
   }, [
     fetchList,
     fetchTracking,
-    fetchDuplicates,
+    fetchClusters,
     fetchVerification,
+    canReviewDuplicates,
+    canVerify,
     status,
     search,
     category,
