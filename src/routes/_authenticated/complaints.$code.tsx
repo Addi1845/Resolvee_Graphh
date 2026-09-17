@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Copy, Printer } from "lucide-react";
 
 import { useI18n } from "@/i18n";
-import { MapPanel } from "@/components/map/MapPanel";
+import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
 import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
 import { getComplaintDetail } from "@/lib/complaints.functions";
 
@@ -224,7 +224,15 @@ function ComplaintReportPage() {
         </div>
 
         <div className="grid gap-6">
-          <MapPanel points={mapPoints} height={260} />
+          <ComplaintLocation
+            lat={complaint.issue_lat}
+            lng={complaint.issue_lng}
+            title={complaint.title}
+            subtitle={`${complaint.tracking_code} · ${t(`app.statuses.${complaint.status}`)}`}
+            band={complaint.priority_band}
+            locationText={complaint.location_text}
+            height={260}
+          />
 
           <section className="rounded-sm border border-border bg-surface p-5 shadow-card">
             <h2 className="text-xl font-bold text-primary">{t("app.reportView.analysis")}</h2>

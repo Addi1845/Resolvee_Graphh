@@ -4,7 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, Images, RefreshCw } from "lucide-react";
 
 import { useI18n } from "@/i18n";
-import { MapPanel } from "@/components/map/MapPanel";
+import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
+import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
+import { DuplicateClusterPanel, type Cluster } from "@/components/dashboard/DuplicateClusterPanel";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import {
   CATEGORIES,
@@ -13,7 +15,7 @@ import {
   getDepartmentTracking,
   getMyAccess,
   listComplaints,
-  listDuplicateReview,
+  listDuplicateClusters,
   listVerificationQueue,
   recordVerification,
   reviewDuplicateLink,
@@ -42,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 type ListResult = Awaited<ReturnType<typeof listComplaints>>;
 type Access = Awaited<ReturnType<typeof getMyAccess>>;
 type Tracking = Awaited<ReturnType<typeof getDepartmentTracking>>;
-type Duplicates = Awaited<ReturnType<typeof listDuplicateReview>>;
+type Clusters = Awaited<ReturnType<typeof listDuplicateClusters>>;
 type Verification = Awaited<ReturnType<typeof listVerificationQueue>>;
 type TrackingRow = Tracking["departments"][number];
 type Complaint = ListResult["complaints"][number];
@@ -66,12 +68,12 @@ function DashboardPage() {
   const saveStatus = useServerFn(updateComplaintStatus);
 
   const fetchTracking = useServerFn(getDepartmentTracking);
-  const fetchDuplicates = useServerFn(listDuplicateReview);
+  const fetchClusters = useServerFn(listDuplicateClusters);
   const fetchVerification = useServerFn(listVerificationQueue);
   const saveDuplicate = useServerFn(reviewDuplicateLink);
   const saveVerification = useServerFn(recordVerification);
 
-  const [duplicates, setDuplicates] = useState<Duplicates | null>(null);
+  const [clusters, setClusters] = useState<Clusters | null>(null);
   const [verification, setVerification] = useState<Verification | null>(null);
   const [verifyNotes, setVerifyNotes] = useState<Record<string, string>>({});
   const [access, setAccess] = useState<Access | null>(null);
@@ -86,23 +88,28 @@ function DashboardPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [openWhy, setOpenWhy] = useState<Record<string, boolean>>({});
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>({});
   const [evidence, setEvidence] = useState<Record<string, { id: string; url: string }[]>>({});
 
   const isStaff = access?.isStaff ?? false;
+  const canReviewDuplicates = access?.canReviewDuplicates ?? false;
+  const canVerify = access?.canVerify ?? false;
+  const scopeAll = access?.scopeAll ?? false;
+  const scopeDepartments = access?.scopeDepartments ?? [];
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [result, departmentResult, duplicateResult, verificationResult] = await Promise.all([
+      const [result, departmentResult, clusterResult, verificationResult] = await Promise.all([
         fetchList({ data: { status, search, category, sort } }),
         fetchTracking({ data: undefined }),
-        fetchDuplicates({ data: undefined }),
-        fetchVerification({ data: undefined }),
+        canReviewDuplicates ? fetchClusters({ data: undefined }) : Promise.resolve(null),
+        canVerify ? fetchVerification({ data: undefined }) : Promise.resolve(null),
       ]);
       setComplaints(result.complaints);
       setSummary(result.summary);
       setTracking(departmentResult);
-      setDuplicates(duplicateResult);
+      setClusters(clusterResult);
       setVerification(verificationResult);
     } finally {
       setLoading(false);
@@ -110,8 +117,10 @@ function DashboardPage() {
   }, [
     fetchList,
     fetchTracking,
-    fetchDuplicates,
+    fetchClusters,
     fetchVerification,
+    canReviewDuplicates,
+    canVerify,
     status,
     search,
     category,
@@ -199,6 +208,40 @@ function DashboardPage() {
     <div className="mx-auto max-w-6xl px-4 py-12">
       <h1 className="text-3xl font-bold text-primary">{t("app.dashboard.title")}</h1>
       <p className="mt-2 text-base text-muted-foreground">{t("app.dashboard.intro")}</p>
+
+      {isStaff ? (
+        <section className="mt-5 rounded-sm border border-secondary/40 bg-info-soft p-4">
+          <p className="text-sm font-bold uppercase tracking-wider text-primary">
+            {t("app.scope.title")}
+          </p>
+          <p className="mt-1 text-base font-semibold text-foreground">
+            {t("app.scope.role", {
+              role: (access?.roles ?? [])
+                .filter((role) => role !== "citizen")
+                .map((role) => t(`app.roles.${role}`))
+                .join(", "),
+            })}
+          </p>
+          <p className="mt-1 text-base text-foreground">
+            {scopeAll
+              ? t("app.scope.all")
+              : scopeDepartments.length === 0
+                ? t("app.scope.none")
+                : t("app.scope.limited", {
+                    dept: scopeDepartments
+                      .map((dept) =>
+                        locale === "hi"
+                          ? dept.name_hi
+                          : locale === "mr"
+                            ? dept.name_mr
+                            : dept.name_en,
+                      )
+                      .join(", "),
+                  })}
+          </p>
+        </section>
+      ) : null}
+
 
       {summary ? (
         <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -289,7 +332,7 @@ function DashboardPage() {
       ) : null}
 
       {isStaff ? (
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="mt-8">
           <WorkloadChart
             rows={[
               ...(tracking?.departments ?? []).map((dept) => ({
@@ -298,7 +341,7 @@ function DashboardPage() {
                 overdue: dept.overdue,
                 resolved: dept.resolved,
               })),
-              ...(tracking?.unassigned
+              ...(tracking?.unassigned && scopeAll
                 ? [
                     {
                       name: t("app.depts.unassigned"),
@@ -310,85 +353,26 @@ function DashboardPage() {
                 : []),
             ]}
           />
-          <MapPanel
-            points={complaints
-              .filter((row) => row.issue_lat !== null && row.issue_lng !== null)
-              .map((row) => ({
-                id: row.id,
-                lat: row.issue_lat as number,
-                lng: row.issue_lng as number,
-                title: row.title,
-                subtitle: `${row.tracking_code} · ${t(`app.statuses.${row.status}`)}`,
-                band: row.priority_band,
-              }))}
-            height={360}
-          />
         </div>
       ) : null}
 
-      {isStaff ? (
-        <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
-          <h2 className="text-xl font-bold text-primary">{t("app.review.dupTitle")}</h2>
-          <p className="mt-1 text-base text-muted-foreground">{t("app.review.dupIntro")}</p>
-
-          {duplicates && duplicates.links.length > 0 ? (
-            <ul className="mt-4 space-y-3">
-              {duplicates.links.map((link) => (
-                <li key={link.id} className="rounded-sm border border-border p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                      {link.complaint?.tracking_code} ↔ {link.related?.tracking_code}
-                    </p>
-                    <span className="rounded-sm bg-info-soft px-3 py-1 text-sm font-bold text-primary">
-                      {t("app.review.dupMatch")}: {Math.round(Number(link.similarity))}/100
-                    </span>
-                  </div>
-                  <p className="mt-2 text-base font-semibold text-foreground">
-                    {link.complaint?.title}
-                  </p>
-                  <p className="text-base text-muted-foreground">{link.related?.title}</p>
-                  {link.reason ? (
-                    <p className="mt-2 text-sm text-muted-foreground">{link.reason}</p>
-                  ) : null}
-                  <p className="mt-2 text-sm font-semibold text-foreground">
-                    {link.state === "confirmed"
-                      ? t("app.review.stateConfirmed")
-                      : link.state === "rejected"
-                        ? t("app.review.stateRejected")
-                        : t("app.review.stateSuggested")}
-                  </p>
-                  {link.state === "suggested" && access?.canUpdate ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        disabled={savingId === link.id}
-                        onClick={() => void handleDuplicate(link.id, "confirmed")}
-                        className="inline-flex min-h-11 items-center rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-secondary disabled:opacity-60"
-                      >
-                        {t("app.review.confirm")}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={savingId === link.id}
-                        onClick={() => void handleDuplicate(link.id, "rejected")}
-                        className="inline-flex min-h-11 items-center rounded-sm border border-border-strong px-4 text-sm font-semibold text-foreground hover:bg-muted disabled:opacity-60"
-                      >
-                        {t("app.review.reject")}
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-4 text-base text-muted-foreground">
-              {loading ? t("app.common.loading") : t("app.review.dupEmpty")}
-            </p>
-          )}
-        </section>
+      {isStaff && canReviewDuplicates ? (
+        <div className="mt-8">
+          <DuplicateClusterPanel
+            clusters={(clusters?.clusters ?? []) as Cluster[]}
+            canReview={access?.canUpdate ?? false}
+            savingId={savingId}
+            loading={loading}
+            onDecide={(linkId, state) => void handleDuplicate(linkId, state)}
+          />
+        </div>
+      ) : isStaff ? (
+        <p className="mt-8 rounded-sm border border-border bg-muted/30 p-4 text-base text-muted-foreground">
+          {t("app.scope.duplicatesHidden")}
+        </p>
       ) : null}
 
-      {isStaff ? (
+      {isStaff && canVerify ? (
         <section className="mt-8 rounded-sm border border-border bg-surface p-5 shadow-card">
           <h2 className="text-xl font-bold text-primary">{t("app.review.verifyTitle")}</h2>
           <p className="mt-1 text-base text-muted-foreground">{t("app.review.verifyIntro")}</p>
@@ -402,6 +386,16 @@ function DashboardPage() {
                   </p>
                   <p className="mt-1 text-base font-semibold text-foreground">{item.title}</p>
                   <p className="text-sm text-muted-foreground">{item.location_text}</p>
+                  <div className="mt-3">
+                    <ComplaintLocation
+                      lat={item.issue_lat}
+                      lng={item.issue_lng}
+                      title={item.title}
+                      subtitle={item.tracking_code}
+                      locationText={item.location_text}
+                      height={200}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => void loadEvidence(item.id)}
@@ -485,6 +479,10 @@ function DashboardPage() {
             </div>
           ) : null}
         </section>
+      ) : isStaff ? (
+        <p className="mt-8 rounded-sm border border-border bg-muted/30 p-4 text-base text-muted-foreground">
+          {t("app.scope.verifyHidden")}
+        </p>
       ) : null}
 
       <div className="mt-8 flex flex-wrap items-end gap-3">
@@ -517,7 +515,10 @@ function DashboardPage() {
             className={`mt-1.5 ${fieldClass}`}
           >
             <option value="">{t("app.dashboard.filterAll")}</option>
-            {CATEGORIES.map((item) => (
+            {(scopeAll
+              ? (CATEGORIES as readonly string[])
+              : scopeDepartments.map((dept) => dept.code)
+            ).map((item) => (
               <option key={item} value={item}>
                 {t(`app.categories.${item}`)}
               </option>
@@ -713,6 +714,34 @@ function DashboardPage() {
                     )
                   ) : null}
                 </div>
+
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setOpenMap((prev) => ({ ...prev, [complaint.id]: !prev[complaint.id] }))
+                    }
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-secondary underline"
+                  >
+                    {openMap[complaint.id] ? t("app.map.single") : t("app.map.locate")}
+                  </button>
+                  {openMap[complaint.id] ? (
+                    <div className="mt-3 grid gap-4 lg:grid-cols-2">
+                      <ComplaintLocation
+                        lat={complaint.issue_lat}
+                        lng={complaint.issue_lng}
+                        title={complaint.title}
+                        subtitle={`${complaint.tracking_code} · ${t(`app.statuses.${complaint.status}`)}`}
+                        band={complaint.priority_band}
+                        locationText={complaint.location_text}
+                        height={240}
+                      />
+                      <ResolutionGraph status={complaint.status} />
+                    </div>
+                  ) : null}
+                </div>
+
+
 
                 <div className="mt-4 flex flex-wrap items-end gap-3">
                   <div className="min-w-56 flex-1">
