@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, LogIn, LogOut, Menu, Network, X } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, Menu, X } from "lucide-react";
+
+import logoUrl from "@/assets/resolvegraph-logo.png";
 
 import { AccessibilityControls } from "./AccessibilityControls";
 import { LanguageSelector } from "./LanguageSelector";
