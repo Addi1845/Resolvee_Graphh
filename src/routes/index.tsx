@@ -100,7 +100,7 @@ function Index() {
             </li>
           ))}
         </ol>
-      </section>
+      </Reveal>
 
       {/* Categories */}
       <Reveal as="section" className="border-y border-border bg-surface">
@@ -117,7 +117,7 @@ function Index() {
             ))}
           </ul>
         </div>
-      </section>
+      </Reveal>
 
       {/* Submission methods */}
       <Reveal as="section" className="mx-auto max-w-7xl px-4 py-14">
@@ -137,7 +137,7 @@ function Index() {
             );
           })}
         </ul>
-      </section>
+      </Reveal>
 
       {/* Tracking + languages */}
       <Reveal as="section" className="border-y border-border bg-surface">
@@ -163,7 +163,7 @@ function Index() {
             <p className="mt-3 leading-relaxed text-muted-foreground">{dict.home.languages.text}</p>
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* FAQ */}
       <Reveal as="section" className="mx-auto max-w-4xl px-4 py-14">
@@ -186,7 +186,7 @@ function Index() {
             </details>
           ))}
         </div>
-      </section>
+      </Reveal>
 
       {/* Accessibility and privacy */}
       <Reveal as="section" className="border-t border-border bg-surface">
@@ -214,7 +214,7 @@ function Index() {
           </div>
           <p className="mt-6 text-sm text-muted-foreground">{t("footer.aboutText")}</p>
         </div>
-      </section>
+      </Reveal>
     </>
   );
 }
