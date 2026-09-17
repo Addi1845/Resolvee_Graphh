@@ -142,7 +142,25 @@
 
   html {
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
+
+  /* Calm, single-pass scroll reveal for content blocks. */
+  .reveal {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+    transition:
+      opacity 520ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      transform 520ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: opacity, transform;
+  }
+
+  .reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+  }
+
 
   body {
     background-color: var(--color-background);
