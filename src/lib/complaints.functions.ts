@@ -520,7 +520,7 @@ export const listComplaints = createServerFn({ method: "POST" })
     let query = context.supabase
       .from("complaints")
       .select(
-        "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, priority_factors, suggested_category, analysis_method, proximity_state, proximity_distance_m, due_date, reporter_name, reporter_contact, created_at",
+        "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, priority_factors, suggested_category, analysis_method, proximity_state, proximity_distance_m, issue_lat, issue_lng, due_date, reporter_name, reporter_contact, created_at",
       )
       .limit(100);
 
