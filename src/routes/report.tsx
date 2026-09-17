@@ -6,7 +6,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { LocationStep, type LocationDraft } from "@/components/report/LocationStep";
 import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
-import { CATEGORIES, submitComplaint } from "@/lib/complaints.functions";
+import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 
 export const Route = createFileRoute("/report")({
@@ -451,7 +451,7 @@ function ReportPage() {
               className="inline-flex min-h-12 items-center gap-2 rounded-sm bg-primary px-6 text-base font-semibold text-primary-foreground hover:bg-secondary disabled:opacity-60"
             >
               <Send aria-hidden="true" className="size-4" />
-              {busy ? t("app.report.submitting") : t("app.report.submit")}
+              {busy ? t("app.triage.analysing") : t("app.report.submit")}
             </button>
           ) : (
             <button
