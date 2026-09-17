@@ -605,7 +605,22 @@ function DashboardPage() {
                   </div>
                 </div>
 
-                <h2 className="mt-1 text-xl font-bold text-primary">{complaint.title}</h2>
+                <h2 className="mt-1 text-xl font-bold text-primary">
+                  <Link
+                    to="/complaints/$code"
+                    params={{ code: complaint.tracking_code }}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    {complaint.title}
+                  </Link>
+                </h2>
+                <Link
+                  to="/complaints/$code"
+                  params={{ code: complaint.tracking_code }}
+                  className="mt-1 inline-block text-sm font-semibold text-secondary underline"
+                >
+                  {t("app.dashboard.openReport")}
+                </Link>
                 <p className="mt-2 whitespace-pre-line text-base text-foreground">
                   {complaint.description}
                 </p>
