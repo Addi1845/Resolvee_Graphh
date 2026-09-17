@@ -1102,12 +1102,14 @@ export const getComplaintDetail = createServerFn({ method: "POST" })
           .from("complaint_departments")
           .select("role, reason, source, departments(code, name_en, name_hi, name_mr)")
           .eq("complaint_id", complaint.id),
+        // Links point in one direction, so both sides are read: the reports
+        // this one was compared against, and the reports compared against it.
         context.supabase
           .from("complaint_duplicates")
           .select(
-            "id, similarity, reason, state, related:complaints!complaint_duplicates_related_complaint_id_fkey(tracking_code, title)",
+            "id, similarity, reason, state, complaint_id, related_complaint_id, related:complaints!complaint_duplicates_related_complaint_id_fkey(tracking_code, title), source_complaint:complaints!complaint_duplicates_complaint_id_fkey(tracking_code, title)",
           )
-          .eq("complaint_id", complaint.id)
+          .or(`complaint_id.eq.${complaint.id},related_complaint_id.eq.${complaint.id}`)
           .order("similarity", { ascending: false }),
         context.supabase
           .from("complaint_verifications")
