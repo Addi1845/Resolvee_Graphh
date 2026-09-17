@@ -39,7 +39,6 @@ export type PhotoInput = {
 };
 
 export type ComplaintInput = {
-  category: string;
   title: string;
   description: string;
   language: string;
@@ -130,9 +129,6 @@ async function requireStaff(context: AuthedContext): Promise<string[]> {
 
 export const submitComplaint = createServerFn({ method: "POST" })
   .inputValidator((input: ComplaintInput) => {
-    const category = CATEGORIES.includes(input.category as (typeof CATEGORIES)[number])
-      ? input.category
-      : "other";
     const title = str(input.title, 160);
     const description = str(input.description, 4000);
     const locationText = str(input.locationText, 300);
