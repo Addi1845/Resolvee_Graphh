@@ -11,6 +11,9 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { I18nProvider } from "../i18n";
+import { AccessibilityProvider } from "../components/a11y/AccessibilityProvider";
+import { SiteShell } from "../components/layout/SiteShell";
 
 function NotFoundComponent() {
   return (
@@ -130,8 +133,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <I18nProvider>
+        <AccessibilityProvider>
+          <SiteShell>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+          </SiteShell>
+        </AccessibilityProvider>
+      </I18nProvider>
     </QueryClientProvider>
   );
 }
