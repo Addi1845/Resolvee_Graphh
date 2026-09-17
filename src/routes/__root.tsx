@@ -10,10 +10,10 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
-import { I18nProvider } from "../i18n";
-import { AccessibilityProvider } from "../components/a11y/AccessibilityProvider";
-import { SiteShell } from "../components/layout/SiteShell";
+import { reportLovableError } from "@/lib/lovable-error-reporting";
+import { I18nProvider } from "@/i18n";
+import { AccessibilityProvider } from "@/components/a11y/AccessibilityProvider";
+import { SiteShell } from "@/components/layout/SiteShell";
 
 function NotFoundComponent() {
   return (
