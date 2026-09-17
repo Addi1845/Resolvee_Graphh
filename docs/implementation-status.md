@@ -32,6 +32,18 @@ any government body and contains synthetic demonstration data only.
   `outside` or `boundary`. A device location is a signal, never proof of
   presence, and "outside" never means a report is false.
 
+- Duplicate suggestions (`duplicate-v1`): same category, within 150 m, within 30
+  days, shared wording. Suggestions only — an officer confirms or rejects each
+  link; nothing is merged automatically.
+- Closure verification: complaints awaiting verification are listed for staff,
+  who accept the evidence (resolved) or send it back for rework. Every decision
+  is stored with a note and written to the complaint timeline.
+- Optional video evidence: one clip per report, stored privately alongside the
+  photos. The model reads only the photos; video is evidence for officers.
+- Synthetic demo complaints (`RG-2026-DEMO01`…`DEMO10`) covering all
+  departments, statuses, priorities, multi-department routing, duplicates and
+  verification history. Clearly labelled "Demo sample".
+
 ## Partial
 
 - Deadlines: complaints currently carry a fixed 7-day target date. Configurable
