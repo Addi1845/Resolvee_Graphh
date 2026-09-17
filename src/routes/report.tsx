@@ -6,6 +6,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Send } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { LocationStep, type LocationDraft } from "@/components/report/LocationStep";
 import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
+import { VoiceInput } from "@/components/report/VoiceInput";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 
