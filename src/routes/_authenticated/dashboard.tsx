@@ -311,7 +311,7 @@ function DashboardPage() {
             ]}
           />
           <MapPanel
-            points={(data?.complaints ?? [])
+            points={complaints
               .filter((row) => row.issue_lat !== null && row.issue_lng !== null)
               .map((row) => ({
                 id: row.id,
