@@ -179,7 +179,7 @@ function ComplaintReportPage() {
           <ResolutionGraph status={complaint.status} reachedStatuses={reached} />
 
           <section className="rounded-sm border border-border bg-surface p-5 shadow-card">
-            <h2 className="text-xl font-bold text-primary">{t("app.track.departments")}</h2>
+            <h2 className="text-xl font-bold text-primary">{t("app.triage.departments")}</h2>
             <ul className="mt-3 grid gap-2">
               {routedDepartments.map((row, index) => (
                 <li
@@ -189,7 +189,7 @@ function ComplaintReportPage() {
                   <p className="text-base font-semibold text-foreground">
                     {departmentName(row.departments as DeptRow)} ·{" "}
                     <span className="text-secondary">
-                      {row.role === "primary" ? t("app.track.rolePrimary") : t("app.track.roleSupporting")}
+                      {row.role === "primary" ? t("app.triage.rolePrimary") : t("app.triage.roleSupporting")}
                     </span>
                   </p>
                   {row.reason ? (
@@ -198,7 +198,7 @@ function ComplaintReportPage() {
                 </li>
               ))}
             </ul>
-            <p className="mt-3 text-sm text-muted-foreground">{t("app.track.reviewNote")}</p>
+            <p className="mt-3 text-sm text-muted-foreground">{t("app.triage.reviewNote")}</p>
           </section>
 
           {photos.length > 0 ? (
@@ -230,8 +230,8 @@ function ComplaintReportPage() {
             <h2 className="text-xl font-bold text-primary">{t("app.reportView.analysis")}</h2>
             <p className="mt-2 text-base text-foreground">
               {complaint.analysis_method === "ai_vision"
-                ? t("app.track.methodAi")
-                : t("app.track.methodRule")}
+                ? t("app.triage.methodAi")
+                : t("app.triage.methodRule")}
             </p>
           </section>
 
