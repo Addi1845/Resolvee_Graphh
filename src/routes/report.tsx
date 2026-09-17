@@ -64,7 +64,14 @@ function ReportPage() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ code: string; photos: number } | null>(null);
+  const [result, setResult] = useState<{
+    code: string;
+    photos: number;
+    category: string;
+    method: string;
+    needsReview: boolean;
+    departments: { code: string; role: string }[];
+  } | null>(null);
 
   // Restore the saved draft before the fields become editable, so a restore
   // never overwrites something the person has already started typing.
@@ -127,7 +134,6 @@ function ReportPage() {
     try {
       const response = await submit({
         data: {
-          category: draft.category,
           title: draft.title,
           description: draft.description,
           language: locale,
