@@ -348,7 +348,7 @@ function ReportPage() {
             <p className="text-muted-foreground">{t("app.wizard.reviewIntro")}</p>
             <dl className="divide-y divide-border rounded-sm border border-border bg-surface">
               {[
-                { label: t("app.report.category"), value: t(`app.categories.${draft.category}`) },
+                { label: t("app.report.category"), value: t("app.triage.pending") },
                 { label: t("app.report.titleLabel"), value: draft.title },
                 { label: t("app.report.descLabel"), value: draft.description },
                 { label: t("app.report.locationLabel"), value: draft.location.locationText },
