@@ -133,6 +133,80 @@ async function requireStaff(context: AuthedContext): Promise<string[]> {
   return staff;
 }
 
+type DepartmentRow = {
+  id: string;
+  code: string;
+  name_en: string;
+  name_hi: string;
+  name_mr: string;
+};
+
+export type StaffScope = {
+  roles: string[];
+  /** True when the person is allowed to see every department's work. */
+  all: boolean;
+  departments: DepartmentRow[];
+  departmentIds: string[];
+};
+
+/**
+ * What this official is allowed to see. A field officer only works on the
+ * complaints routed to their own service; city-wide roles see everything.
+ */
+async function staffScope(context: AuthedContext): Promise<StaffScope> {
+  const roles = await requireStaff(context);
+  const cityWide = roles.some((role) =>
+    ["admin", "supervisor", "auditor", "intake_officer"].includes(role),
+  );
+
+  if (cityWide) {
+    const { data } = await context.supabase
+      .from("departments")
+      .select("id, code, name_en, name_hi, name_mr")
+      .order("name_en", { ascending: true });
+    return { roles, all: true, departments: (data ?? []) as DepartmentRow[], departmentIds: [] };
+  }
+
+  const { data: assigned } = await context.supabase
+    .from("staff_departments")
+    .select("departments(id, code, name_en, name_hi, name_mr)")
+    .eq("user_id", context.userId);
+
+  const departments = ((assigned ?? []) as { departments: DepartmentRow | null }[])
+    .map((row) => row.departments)
+    .filter((row): row is DepartmentRow => row !== null);
+
+  return {
+    roles,
+    all: false,
+    departments,
+    departmentIds: departments.map((row) => row.id),
+  };
+}
+
+/**
+ * Complaint ids a scoped officer may work on: anything where their department
+ * is the accountable owner or a contributing service.
+ */
+async function scopedComplaintIds(
+  context: AuthedContext,
+  departmentIds: string[],
+): Promise<string[]> {
+  if (departmentIds.length === 0) return [];
+  const [routed, owned] = await Promise.all([
+    context.supabase
+      .from("complaint_departments")
+      .select("complaint_id")
+      .in("department_id", departmentIds),
+    context.supabase.from("complaints").select("id").in("department_id", departmentIds),
+  ]);
+
+  const ids = new Set<string>();
+  for (const row of (routed.data ?? []) as { complaint_id: string }[]) ids.add(row.complaint_id);
+  for (const row of (owned.data ?? []) as { id: string }[]) ids.add(row.id);
+  return [...ids];
+}
+
 /**
  * Compare a new report with recent ones and store suggested duplicate links.
  * Suggestions only: two reports are never merged without an officer's decision.
@@ -516,13 +590,26 @@ export const listComplaints = createServerFn({ method: "POST" })
     sort: str(input?.sort, 20) || "priority",
   }))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    const scope = await staffScope(context);
+    let allowedIds: string[] | null = null;
+    if (!scope.all) {
+      allowedIds = await scopedComplaintIds(context, scope.departmentIds);
+      if (allowedIds.length === 0) {
+        return {
+          complaints: [],
+          summary: { total: 0, critical: 0, overdue: 0, open: 0 },
+        };
+      }
+    }
+
     let query = context.supabase
       .from("complaints")
       .select(
         "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, priority_factors, suggested_category, analysis_method, proximity_state, proximity_distance_m, issue_lat, issue_lng, due_date, reporter_name, reporter_contact, created_at",
       )
       .limit(100);
+
+    if (allowedIds) query = query.in("id", allowedIds);
 
     if (data.status) query = query.eq("status", data.status);
     if (data.category) query = query.eq("category", data.category);
@@ -581,10 +668,31 @@ export const getMyAccess = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     const roles = await rolesOf(context);
     const staffRoles = roles.filter((role) => (STAFF_ROLES as readonly string[]).includes(role));
+    if (staffRoles.length === 0) {
+      return {
+        roles,
+        isStaff: false,
+        canUpdate: false,
+        canReviewDuplicates: false,
+        canVerify: false,
+        scopeAll: false,
+        scopeDepartments: [] as DepartmentRow[],
+      };
+    }
+
+    const scope = await staffScope(context);
     return {
       roles,
-      isStaff: staffRoles.length > 0,
+      isStaff: true,
       canUpdate: staffRoles.some((role) => role !== "auditor"),
+      // Intake, supervisors and admins work the duplicate queue.
+      canReviewDuplicates: staffRoles.some((role) =>
+        ["intake_officer", "supervisor", "admin", "auditor"].includes(role),
+      ),
+      // Closure evidence is checked by a supervisor or an administrator.
+      canVerify: staffRoles.some((role) => ["supervisor", "admin", "auditor"].includes(role)),
+      scopeAll: scope.all,
+      scopeDepartments: scope.all ? [] : scope.departments,
     };
   });
 
@@ -592,17 +700,33 @@ export const getMyAccess = createServerFn({ method: "POST" })
 export const getDepartmentTracking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await requireStaff(context);
+    const scope = await staffScope(context);
 
-    const { data: departments } = await context.supabase
+    const { data: departmentRowsAll } = await context.supabase
       .from("departments")
       .select("id, code, name_en, name_hi, name_mr")
       .order("name_en", { ascending: true });
 
-    const { data: rows, error } = await context.supabase
+    const departments = scope.all
+      ? (departmentRowsAll ?? [])
+      : (departmentRowsAll ?? []).filter((row: { id: string }) =>
+          scope.departmentIds.includes(row.id),
+        );
+
+    let trackingQuery = context.supabase
       .from("complaints")
-      .select("department_id, status, due_date, priority_band")
+      .select("id, department_id, status, due_date, priority_band")
       .limit(5000);
+
+    if (!scope.all) {
+      const allowedIds = await scopedComplaintIds(context, scope.departmentIds);
+      if (allowedIds.length === 0) {
+        return { departments: [], unassigned: null, totals: { total: 0, open: 0 } };
+      }
+      trackingQuery = trackingQuery.in("id", allowedIds);
+    }
+
+    const { data: rows, error } = await trackingQuery;
     if (error) {
       console.error("getDepartmentTracking failed", error.message);
       throw new Error("LIST_FAILED");
@@ -616,7 +740,13 @@ export const getDepartmentTracking = createServerFn({ method: "POST" })
     >();
 
     for (const row of rows ?? []) {
-      const key = row.department_id ?? "unassigned";
+      // A scoped officer also sees work where their service is a supporting
+      // department, so those rows are counted against their own service.
+      const key = scope.all
+        ? (row.department_id ?? "unassigned")
+        : scope.departmentIds.includes(row.department_id ?? "")
+          ? row.department_id!
+          : (scope.departmentIds[0] ?? "unassigned");
       const bucket =
         buckets.get(key) ?? { total: 0, open: 0, overdue: 0, resolved: 0, critical: 0 };
       bucket.total += 1;
@@ -690,6 +820,34 @@ export const updateComplaintStatus = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const DUPLICATE_SELECT =
+  "id, similarity, reason, state, created_at, complaint:complaints!complaint_duplicates_complaint_id_fkey(id, tracking_code, title, location_text, status, category, priority_band, priority_score, due_date, issue_lat, issue_lng, created_at), related:complaints!complaint_duplicates_related_complaint_id_fkey(id, tracking_code, title, location_text, status, category, priority_band, priority_score, due_date, issue_lat, issue_lng, created_at)";
+
+type DuplicateSide = {
+  id: string;
+  tracking_code: string;
+  title: string;
+  location_text: string;
+  status: string;
+  category: string;
+  priority_band: string | null;
+  priority_score: number | null;
+  due_date: string | null;
+  issue_lat: number | null;
+  issue_lng: number | null;
+  created_at: string;
+};
+
+type DuplicateLinkRow = {
+  id: string;
+  similarity: number;
+  reason: string | null;
+  state: string;
+  created_at: string;
+  complaint: DuplicateSide | null;
+  related: DuplicateSide | null;
+};
+
 /**
  * Duplicate review queue. Every link is a suggestion waiting for an officer:
  * confirming one never closes a complaint by itself.
@@ -697,22 +855,108 @@ export const updateComplaintStatus = createServerFn({ method: "POST" })
 export const listDuplicateReview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await requireStaff(context);
+    const scope = await staffScope(context);
+    const allowed = scope.all ? null : await scopedComplaintIds(context, scope.departmentIds);
+    if (allowed && allowed.length === 0) {
+      return { links: [], policyVersion: DUPLICATE_POLICY.version };
+    }
+
     const { data, error } = await context.supabase
       .from("complaint_duplicates")
-      .select(
-        "id, similarity, reason, state, created_at, complaint:complaints!complaint_duplicates_complaint_id_fkey(tracking_code, title, location_text, created_at), related:complaints!complaint_duplicates_related_complaint_id_fkey(tracking_code, title, location_text, created_at)",
-      )
+      .select(DUPLICATE_SELECT)
       .order("similarity", { ascending: false })
-      .limit(50);
+      .limit(80);
     if (error) {
       console.error("listDuplicateReview failed", error.message);
       throw new Error("LIST_FAILED");
     }
-    return {
-      links: data ?? [],
-      policyVersion: DUPLICATE_POLICY.version,
-    };
+
+    const rows = (data ?? []) as DuplicateLinkRow[];
+    const visible = allowed
+      ? rows.filter(
+          (row) =>
+            (row.complaint && allowed.includes(row.complaint.id)) ||
+            (row.related && allowed.includes(row.related.id)),
+        )
+      : rows;
+
+    return { links: visible.slice(0, 50), policyVersion: DUPLICATE_POLICY.version };
+  });
+
+/**
+ * Duplicate clusters: several separate reports about one real problem, grouped
+ * around the report an officer keeps as the working case. Grouping is a
+ * suggestion — nothing is merged or closed without an officer's decision.
+ */
+export const listDuplicateClusters = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const scope = await staffScope(context);
+    const allowed = scope.all ? null : await scopedComplaintIds(context, scope.departmentIds);
+    if (allowed && allowed.length === 0) {
+      return { clusters: [], policyVersion: DUPLICATE_POLICY.version };
+    }
+
+    const { data, error } = await context.supabase
+      .from("complaint_duplicates")
+      .select(DUPLICATE_SELECT)
+      .order("similarity", { ascending: false })
+      .limit(200);
+    if (error) {
+      console.error("listDuplicateClusters failed", error.message);
+      throw new Error("LIST_FAILED");
+    }
+
+    const rows = (data ?? []) as DuplicateLinkRow[];
+    const clusters = new Map<
+      string,
+      {
+        kept: DuplicateSide;
+        members: {
+          linkId: string;
+          similarity: number;
+          reason: string | null;
+          state: string;
+          complaint: DuplicateSide;
+        }[];
+      }
+    >();
+
+    for (const row of rows) {
+      if (!row.complaint || !row.related) continue;
+      // The older report is kept as the working case; newer ones link to it.
+      const kept =
+        new Date(row.related.created_at) <= new Date(row.complaint.created_at)
+          ? row.related
+          : row.complaint;
+      const other = kept.id === row.related.id ? row.complaint : row.related;
+
+      if (allowed && !allowed.includes(kept.id) && !allowed.includes(other.id)) continue;
+
+      const entry = clusters.get(kept.id) ?? { kept, members: [] };
+      if (!entry.members.some((member) => member.complaint.id === other.id)) {
+        entry.members.push({
+          linkId: row.id,
+          similarity: Number(row.similarity),
+          reason: row.reason,
+          state: row.state,
+          complaint: other,
+        });
+      }
+      clusters.set(kept.id, entry);
+    }
+
+    const result = [...clusters.values()]
+      .map((cluster) => ({
+        ...cluster,
+        members: cluster.members.sort((a, b) => b.similarity - a.similarity),
+        reportCount: cluster.members.length + 1,
+        pendingCount: cluster.members.filter((member) => member.state === "suggested").length,
+        confirmedCount: cluster.members.filter((member) => member.state === "confirmed").length,
+      }))
+      .sort((a, b) => b.reportCount - a.reportCount);
+
+    return { clusters: result, policyVersion: DUPLICATE_POLICY.version };
   });
 
 export const reviewDuplicateLink = createServerFn({ method: "POST" })
@@ -743,13 +987,23 @@ export const reviewDuplicateLink = createServerFn({ method: "POST" })
 export const listVerificationQueue = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await requireStaff(context);
-    const { data, error } = await context.supabase
+    const scope = await staffScope(context);
+    let query = context.supabase
       .from("complaints")
-      .select("id, tracking_code, title, category, location_text, due_date, updated_at")
+      .select(
+        "id, tracking_code, title, category, location_text, due_date, updated_at, issue_lat, issue_lng",
+      )
       .eq("status", "awaiting_verification")
       .order("updated_at", { ascending: true })
       .limit(50);
+
+    if (!scope.all) {
+      const allowed = await scopedComplaintIds(context, scope.departmentIds);
+      if (allowed.length === 0) return { pending: [], recent: [] };
+      query = query.in("id", allowed);
+    }
+
+    const { data, error } = await query;
     if (error) {
       console.error("listVerificationQueue failed", error.message);
       throw new Error("LIST_FAILED");
@@ -819,7 +1073,7 @@ export const getComplaintDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { code: string }) => ({ code: str(input.code, 40).toUpperCase() }))
   .handler(async ({ data, context }) => {
-    await requireStaff(context);
+    const scope = await staffScope(context);
 
     const { data: complaint } = await context.supabase
       .from("complaints")
@@ -830,6 +1084,12 @@ export const getComplaintDetail = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (!complaint) return { found: false as const };
+
+    // A scoped officer may only open reports routed to their own service.
+    if (!scope.all) {
+      const allowed = await scopedComplaintIds(context, scope.departmentIds);
+      if (!allowed.includes(complaint.id)) return { found: false as const };
+    }
 
     const [{ data: updates }, { data: routed }, { data: duplicates }, { data: verifications }] =
       await Promise.all([
