@@ -101,8 +101,9 @@ function ReportPage() {
       if (draft.title.trim().length < 4) return t("app.report.errTitle");
       if (draft.description.trim().length < 15) return t("app.report.errDesc");
     }
-    if (current === "locate" && draft.location.locationText.trim().length < 3) {
-      return t("app.report.errLocation");
+    if (current === "locate") {
+      if (draft.location.locationText.trim().length < 3) return t("app.report.errLocation");
+      if (!draft.location.issue) return t("app.location.pinRequired");
     }
     // Photo evidence is mandatory for every complaint; video is optional.
     if (current === "attach" && photos.every((item) => item.kind === "video")) {
@@ -165,7 +166,13 @@ function ReportPage() {
       window.localStorage.removeItem(DRAFT_KEY);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "";
-      setError(message.includes("PHOTO_REQUIRED") ? t("app.media.required") : t("app.report.errGeneric"));
+      setError(
+        message.includes("PHOTO_REQUIRED")
+          ? t("app.media.required")
+          : message.includes("LOCATION_OUTSIDE_NASHIK") || message.includes("LOCATION_PIN_REQUIRED")
+            ? t("app.location.pinRequired")
+            : t("app.report.errGeneric"),
+      );
     } finally {
       setBusy(false);
     }

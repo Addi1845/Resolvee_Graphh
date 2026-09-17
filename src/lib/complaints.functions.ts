@@ -8,6 +8,7 @@ import {
   MEDIA_POLICY,
   assessPriority,
   evaluateProximity,
+  isInNashik,
   scoreDuplicate,
   suggestCategory,
   type DeviceObservation,
@@ -293,6 +294,11 @@ export const submitComplaint = createServerFn({ method: "POST" })
     const photos = [...images, ...videos];
     if (images.length === 0) throw new Error("PHOTO_REQUIRED");
 
+    const issueLat = num(input.issueLat);
+    const issueLng = num(input.issueLng);
+    if (issueLat === null || issueLng === null) throw new Error("LOCATION_PIN_REQUIRED");
+    if (!isInNashik({ lat: issueLat, lng: issueLng })) throw new Error("LOCATION_OUTSIDE_NASHIK");
+
 
     const device = input.device
       ? {
@@ -311,8 +317,8 @@ export const submitComplaint = createServerFn({ method: "POST" })
       reporterName: str(input.reporterName, 120),
       reporterContact: str(input.reporterContact, 120),
       language: ["en", "hi", "mr"].includes(input.language) ? input.language : "en",
-      issueLat: num(input.issueLat),
-      issueLng: num(input.issueLng),
+      issueLat,
+      issueLng,
       device,
       photos,
     };

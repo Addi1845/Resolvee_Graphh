@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Crosshair, Info, MapPin } from "lucide-react";
 
 import { useI18n } from "@/i18n";
-import { LOCATION_POLICY, evaluateProximity, type DeviceObservation } from "@/lib/policy";
+import {
+  LOCATION_POLICY,
+  evaluateProximity,
+  isInNashik,
+  type DeviceObservation,
+} from "@/lib/policy";
+
+const NashikLocationPicker = lazy(() => import("@/components/map/NashikLocationPicker"));
 
 const fieldClass =
   "mt-1.5 block w-full rounded-sm border border-border-strong bg-surface px-3 py-3 text-base text-foreground outline-none focus:border-secondary focus:ring-2 focus:ring-ring";
@@ -24,6 +31,9 @@ export function LocationStep({
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => setMapReady(true), []);
 
   function shareLocation() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -40,6 +50,11 @@ export function LocationStep({
           accuracyM: position.coords.accuracy,
           observedAt: new Date().toISOString(),
         };
+        if (!isInNashik(observation)) {
+          setMessage(t("app.location.outsideNashik"));
+          setBusy(false);
+          return;
+        }
         onChange({
           ...value,
           device: observation,
@@ -84,6 +99,43 @@ export function LocationStep({
           onChange={(event) => onChange({ ...value, landmark: event.target.value })}
           className={fieldClass}
         />
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-semibold text-foreground">{t("app.location.mapTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.location.mapHelp")}</p>
+        </div>
+        {mapReady ? (
+          <Suspense
+            fallback={
+              <div className="flex h-80 items-center justify-center rounded-sm border border-border bg-muted/30 text-sm text-muted-foreground">
+                {t("app.common.loading")}
+              </div>
+            }
+          >
+            <NashikLocationPicker
+              value={value.issue}
+              onChange={(issue) => onChange({ ...value, issue })}
+            />
+          </Suspense>
+        ) : (
+          <div className="flex h-80 items-center justify-center rounded-sm border border-border bg-muted/30 text-sm text-muted-foreground">
+            {t("app.common.loading")}
+          </div>
+        )}
+        {value.issue ? (
+          <p className="text-sm font-semibold text-success-foreground">
+            {t("app.location.pinSelected", {
+              lat: value.issue.lat.toFixed(5),
+              lng: value.issue.lng.toFixed(5),
+            })}
+          </p>
+        ) : (
+          <p className="text-sm font-semibold text-warning-foreground">
+            {t("app.location.pinRequired")}
+          </p>
+        )}
       </div>
 
       <div className="rounded-sm border border-border bg-muted/40 p-4">
