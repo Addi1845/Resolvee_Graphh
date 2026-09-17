@@ -324,7 +324,7 @@ function DashboardPage() {
                     className="inline-flex items-center gap-2 text-sm font-semibold text-secondary underline"
                   >
                     <Images aria-hidden="true" className="size-4" />
-                    {t("app.media.title")}
+                    {t("app.media.attached")}
                   </button>
                   {evidence[complaint.id] ? (
                     evidence[complaint.id]!.length === 0 ? (
