@@ -152,6 +152,14 @@ function ReportPage() {
     }
   }
 
+  if (!ready) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-14 text-base text-muted-foreground">
+        {t("app.common.loading")}
+      </div>
+    );
+  }
+
   if (result) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-14">
