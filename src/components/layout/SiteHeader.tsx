@@ -20,6 +20,18 @@ const NAV_ITEMS = [
 export function SiteHeader() {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { session } = useSession();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  async function handleSignOut() {
+    setMenuOpen(false);
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    await navigate({ to: "/", replace: true });
+  }
+
 
   return (
     <header className="bg-primary text-primary-foreground">
@@ -49,13 +61,33 @@ export function SiteHeader() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Link
-            to="/login"
-            className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
-          >
-            <LogIn aria-hidden="true" className="size-4" />
-            {t("nav.login")}
-          </Link>
+          {session ? (
+            <>
+              <Link
+                to="/dashboard"
+                className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
+              >
+                <LayoutDashboard aria-hidden="true" className="size-4" />
+                {t("app.auth.dashboard")}
+              </Link>
+              <button
+                type="button"
+                onClick={() => void handleSignOut()}
+                className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
+              >
+                <LogOut aria-hidden="true" className="size-4" />
+                {t("app.auth.signOut")}
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/auth"
+              className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
+            >
+              <LogIn aria-hidden="true" className="size-4" />
+              {t("nav.login")}
+            </Link>
+          )}
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
