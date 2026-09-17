@@ -41,7 +41,7 @@ export function ComplaintLocation({
     );
   }
 
-  const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=18/${lat}/${lng}`;
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
   return (
     <div>
@@ -64,7 +64,7 @@ export function ComplaintLocation({
           {t("app.map.coords", { lat: lat.toFixed(5), lng: lng.toFixed(5) })}
         </p>
         <a
-          href={osmUrl}
+          href={mapUrl}
           target="_blank"
           rel="noreferrer"
           className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-secondary underline"

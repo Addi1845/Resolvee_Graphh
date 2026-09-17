@@ -97,6 +97,30 @@ export const LOCATION_POLICY = {
   maxAccuracyMetres: 200,
 };
 
+/** Nashik Municipal service-area guardrails used by the report map. */
+export const NASHIK_CENTER = { lat: 19.9975, lng: 73.7898 } as const;
+export const NASHIK_BOUNDS = {
+  south: 19.82,
+  west: 73.62,
+  north: 20.18,
+  east: 73.98,
+} as const;
+export const NASHIK_MAP_BOUNDS: [[number, number], [number, number]] = [
+  [NASHIK_BOUNDS.south, NASHIK_BOUNDS.west],
+  [NASHIK_BOUNDS.north, NASHIK_BOUNDS.east],
+];
+
+export function isInNashik(point: { lat: number; lng: number }): boolean {
+  return (
+    Number.isFinite(point.lat) &&
+    Number.isFinite(point.lng) &&
+    point.lat >= NASHIK_BOUNDS.south &&
+    point.lat <= NASHIK_BOUNDS.north &&
+    point.lng >= NASHIK_BOUNDS.west &&
+    point.lng <= NASHIK_BOUNDS.east
+  );
+}
+
 export const PRIORITY_POLICY = {
   version: "impact-v1",
   weights: {
