@@ -6,6 +6,8 @@ import { ShieldCheck } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyAccess } from "@/lib/complaints.functions";
+import { DemoAccountPicker } from "@/components/auth/DemoAccountPicker";
+import { DEMO_STAFF_ACCOUNTS } from "@/lib/demo-accounts";
 
 export const Route = createFileRoute("/staff-login")({
   ssr: false,
@@ -40,6 +42,7 @@ function StaffLoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [demoSelected, setDemoSelected] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -127,6 +130,17 @@ function StaffLoginPage() {
       <Link to="/auth" className="mt-6 inline-block text-sm font-semibold text-secondary underline">
         {t("app.auth.toCitizen")}
       </Link>
+
+      <DemoAccountPicker
+        accounts={DEMO_STAFF_ACCOUNTS}
+        selected={demoSelected}
+        onSelect={(demoEmail, demoPassword) => {
+          setEmail(demoEmail);
+          setPassword(demoPassword);
+          setDemoSelected(demoEmail);
+          setError(null);
+        }}
+      />
     </div>
   );
 }
