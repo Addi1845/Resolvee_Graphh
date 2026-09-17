@@ -64,6 +64,12 @@ export function SiteHeader() {
           {session ? (
             <>
               <Link
+                to="/my-complaints"
+                className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
+              >
+                {t("app.mine.title")}
+              </Link>
+              <Link
                 to="/dashboard"
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
@@ -131,6 +137,13 @@ export function SiteHeader() {
           <li className="md:hidden">
             {session ? (
               <div className="flex flex-col">
+                <Link
+                  to="/my-complaints"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex min-h-12 items-center gap-2 border-b-4 border-b-transparent px-3 text-sm font-semibold text-primary-foreground/90 hover:bg-primary-foreground/10"
+                >
+                  {t("app.mine.title")}
+                </Link>
                 <Link
                   to="/dashboard"
                   onClick={() => setMenuOpen(false)}
