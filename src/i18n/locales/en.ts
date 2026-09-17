@@ -177,6 +177,6 @@ export const en = {
     privacy: "Privacy",
     rights: "ResolveGraph AI — prototype build.",
   },
-} as const;
+};
 
 export type Dictionary = typeof en;
