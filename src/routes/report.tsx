@@ -189,6 +189,45 @@ function ReportPage() {
             {result.code}
           </p>
         </div>
+
+        <section className="mt-6 rounded-sm border border-border bg-surface p-5">
+          <h2 className="text-lg font-bold text-primary">{t("app.triage.resultTitle")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {result.method === "ai_vision"
+              ? t("app.triage.methodAi")
+              : t("app.triage.methodRule")}
+          </p>
+          <p className="mt-3 text-base text-foreground">
+            <span className="font-semibold">{t("app.triage.detected")}: </span>
+            {t(`app.categories.${result.category}`)}
+          </p>
+          <p className="mt-3 text-sm font-semibold text-foreground">
+            {t("app.triage.departments")}
+          </p>
+          <ul className="mt-2 space-y-2">
+            {result.departments.map((dept) => (
+              <li
+                key={dept.code}
+                className="flex flex-wrap items-center gap-2 rounded-sm border border-border px-3 py-2 text-base text-foreground"
+              >
+                {t(`app.categories.${dept.code}`)}
+                <span
+                  className={`rounded-sm px-2 py-0.5 text-xs font-semibold ${
+                    dept.role === "primary"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {dept.role === "primary"
+                    ? t("app.triage.rolePrimary")
+                    : t("app.triage.roleSupporting")}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm text-muted-foreground">{t("app.triage.reviewNote")}</p>
+        </section>
+
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             to="/track"
