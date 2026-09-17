@@ -263,6 +263,21 @@ export const submitComplaint = createServerFn({ method: "POST" })
           note: "Complaint received through the citizen portal.",
         });
 
+        // Record every responsible department: one accountable owner plus the
+        // services expected to contribute. Staff can correct this in review.
+        const routingRows = routed
+          .map((entry) => ({
+            complaint_id: row.id,
+            department_id: departmentIdByCode.get(entry.code) ?? null,
+            role: entry.role,
+            source: triage.method === "ai_vision" ? "ai_suggested" : "rule_based_demo",
+            reason: entry.reason,
+          }))
+          .filter((entry) => entry.department_id !== null);
+        if (routingRows.length > 0) {
+          await supabaseAdmin.from("complaint_departments").insert(routingRows as never);
+        }
+
         let stored = 0;
         for (const photo of data.photos) {
           const decoded = decodeDataUrl(photo.dataUrl);
