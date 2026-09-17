@@ -151,7 +151,14 @@ function ReportPage() {
           })),
         },
       });
-      setResult({ code: response.trackingCode, photos: response.photosStored });
+      setResult({
+        code: response.trackingCode,
+        photos: response.photosStored,
+        category: response.detectedCategory,
+        method: response.analysisMethod,
+        needsReview: response.needsReview,
+        departments: response.departments,
+      });
       window.localStorage.removeItem(DRAFT_KEY);
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "";
@@ -248,22 +255,8 @@ function ReportPage() {
       <div className="mt-8 space-y-5">
         {step === "describe" ? (
           <>
-            <div>
-              <label htmlFor="category" className="text-sm font-semibold text-foreground">
-                {t("app.report.category")}
-              </label>
-              <select
-                id="category"
-                value={draft.category}
-                onChange={(event) => setDraft({ ...draft, category: event.target.value })}
-                className={fieldClass}
-              >
-                {CATEGORIES.map((item) => (
-                  <option key={item} value={item}>
-                    {t(`app.categories.${item}`)}
-                  </option>
-                ))}
-              </select>
+            <div className="rounded-sm border border-info/40 bg-info-soft p-4 text-sm text-foreground">
+              {t("app.triage.autoRoute")}
             </div>
             <div>
               <label htmlFor="title" className="text-sm font-semibold text-foreground">
