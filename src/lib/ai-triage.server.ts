@@ -214,6 +214,12 @@ export async function triageComplaint(input: {
           )
         : [],
       needsReview: parsed["needs_review"] !== false || category === "other",
+      authenticityConcern: parsed["authenticity_concern"] === true,
+      authenticityReasons: Array.isArray(parsed["authenticity_reasons"])
+        ? (parsed["authenticity_reasons"] as unknown[]).filter(
+            (item): item is string => typeof item === "string",
+          )
+        : [],
     };
   } catch (error) {
     console.error("triage failed", error instanceof Error ? error.message : error);
