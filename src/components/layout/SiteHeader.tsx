@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { LayoutDashboard, LogIn, LogOut, Menu, X } from "lucide-react";
@@ -8,9 +8,8 @@ import logoUrl from "@/assets/resolvegraph-logo.png";
 import { AccessibilityControls } from "./AccessibilityControls";
 import { LanguageSelector } from "./LanguageSelector";
 import { useI18n } from "@/i18n";
-import { useSession } from "@/hooks/useSession";
+import { useStaffAccess } from "@/hooks/useStaffAccess";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyAccess } from "@/lib/complaints.functions";
 
 // Citizens and visitors get the reporting journey; officials get the work queue.
 const CITIZEN_NAV = [
@@ -31,29 +30,13 @@ const STAFF_NAV = [
 export function SiteHeader() {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { session } = useSession();
+  const { session, isStaff } = useStaffAccess();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isStaff, setIsStaff] = useState(false);
-
-  // Only officials get the official dashboard link.
-  useEffect(() => {
-    if (!session) {
-      setIsStaff(false);
-      return;
-    }
-    let active = true;
-    void getMyAccess({ data: undefined })
-      .then((result) => active && setIsStaff(result.isStaff))
-      .catch(() => active && setIsStaff(false));
-    return () => {
-      active = false;
-    };
-  }, [session]);
+  const navItems = isStaff ? STAFF_NAV : CITIZEN_NAV;
 
   async function handleSignOut() {
     setMenuOpen(false);
-    setIsStaff(false);
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
