@@ -1283,3 +1283,60 @@ export const getComplaintDetail = createServerFn({ method: "POST" })
       photos: await signedPhotoUrls(complaint.id),
     };
   });
+
+/**
+ * Flagged reports queue for departments: complaints the assistant judged
+ * implausible, and complaints that look like a repeat of an existing report.
+ * Both lists are suggestions — an officer decides what happens.
+ */
+export const listFlaggedComplaints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const scope = await staffScope(context);
+    const allowed = scope.all ? null : await scopedComplaintIds(context, scope.departmentIds);
+    if (allowed && allowed.length === 0) {
+      return { fake: [], duplicates: [] };
+    }
+
+    const columns =
+      "id, tracking_code, title, category, status, location_text, created_at, integrity_flag, integrity_reasons, integrity_acknowledged, duplicate_suspect";
+
+    let fakeQuery = context.supabase
+      .from("complaints")
+      .select(columns)
+      .eq("integrity_flag", "suspected_fake")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    let dupQuery = context.supabase
+      .from("complaints")
+      .select(columns)
+      .eq("duplicate_suspect", true)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (allowed) {
+      fakeQuery = fakeQuery.in("id", allowed);
+      dupQuery = dupQuery.in("id", allowed);
+    }
+
+    const [{ data: fake }, { data: dup }] = await Promise.all([fakeQuery, dupQuery]);
+    return { fake: fake ?? [], duplicates: dup ?? [] };
+  });
+
+/** An officer clears a plausibility flag after looking at the evidence. */
+export const clearIntegrityFlag = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => ({ id: str(input.id, 40) }))
+  .handler(async ({ data, context }) => {
+    const staffRoles = await requireStaff(context);
+    if (!staffRoles.some((role) => role !== "auditor")) throw new Error("READ_ONLY_ROLE");
+    const { error } = await context.supabase
+      .from("complaints")
+      .update({ integrity_flag: "cleared" })
+      .eq("id", data.id);
+    if (error) {
+      console.error("clearIntegrityFlag failed", error.message);
+      throw new Error("UPDATE_FAILED");
+    }
+    return { ok: true };
+  });
