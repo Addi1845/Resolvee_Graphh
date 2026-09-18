@@ -209,6 +209,81 @@ async function scopedComplaintIds(
 }
 
 /**
+ * Read-only duplicate scan. Returns the recent reports that look like the same
+ * problem. Nothing is written and nothing is merged.
+ */
+async function findDuplicateCandidates(input: {
+  id?: string;
+  category: string;
+  text: string;
+  lat: number | null;
+  lng: number | null;
+}): Promise<
+  {
+    id: string;
+    trackingCode: string;
+    title: string;
+    locationText: string;
+    status: string;
+    createdAt: string;
+    score: number;
+    reasons: string[];
+  }[]
+> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const since = new Date(Date.now() - DUPLICATE_POLICY.windowDays * 86_400_000).toISOString();
+
+  let query = supabaseAdmin
+    .from("complaints")
+    .select(
+      "id, tracking_code, category, title, description, location_text, status, created_at, issue_lat, issue_lng",
+    )
+    .eq("category", input.category)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(60);
+  if (input.id) query = query.neq("id", input.id);
+
+  const { data: recent } = await query;
+
+  const matches: {
+    id: string;
+    trackingCode: string;
+    title: string;
+    locationText: string;
+    status: string;
+    createdAt: string;
+    score: number;
+    reasons: string[];
+  }[] = [];
+
+  for (const candidate of recent ?? []) {
+    const { score, reasons } = scoreDuplicate(
+      { category: input.category, text: input.text, lat: input.lat, lng: input.lng },
+      {
+        category: candidate.category,
+        text: `${candidate.title} ${candidate.description} ${candidate.location_text}`,
+        lat: candidate.issue_lat,
+        lng: candidate.issue_lng,
+      },
+    );
+    if (score < DUPLICATE_POLICY.minScore) continue;
+    matches.push({
+      id: candidate.id,
+      trackingCode: candidate.tracking_code,
+      title: candidate.title,
+      locationText: candidate.location_text,
+      status: candidate.status,
+      createdAt: candidate.created_at,
+      score,
+      reasons,
+    });
+  }
+
+  return matches.sort((a, b) => b.score - a.score).slice(0, 5);
+}
+
+/**
  * Compare a new report with recent ones and store suggested duplicate links.
  * Suggestions only: two reports are never merged without an officer's decision.
  */
@@ -220,18 +295,8 @@ async function suggestDuplicates(input: {
   lng: number | null;
 }): Promise<{ trackingCode: string; score: number; reasons: string[] }[]> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const since = new Date(Date.now() - DUPLICATE_POLICY.windowDays * 86_400_000).toISOString();
+  const matches = await findDuplicateCandidates(input);
 
-  const { data: recent } = await supabaseAdmin
-    .from("complaints")
-    .select("id, tracking_code, category, title, description, location_text, issue_lat, issue_lng")
-    .eq("category", input.category)
-    .neq("id", input.id)
-    .gte("created_at", since)
-    .order("created_at", { ascending: false })
-    .limit(60);
-
-  const matches: { trackingCode: string; score: number; reasons: string[] }[] = [];
   const rows: {
     complaint_id: string;
     related_complaint_id: string;
