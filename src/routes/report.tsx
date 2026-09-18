@@ -614,7 +614,7 @@ function ReportPage() {
                         <ul className="mt-2 space-y-2">
                           {precheck.duplicates.map((item) => (
                             <li
-                              key={item.id}
+                              key={item.trackingCode}
                               className="rounded-sm border border-info/40 bg-info-soft px-3 py-2 text-sm text-foreground"
                             >
                               <span className="font-semibold">{item.trackingCode}</span> ·{" "}
