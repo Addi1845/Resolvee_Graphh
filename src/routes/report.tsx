@@ -214,6 +214,7 @@ function ReportPage() {
           issueLat: draft.location.issue?.lat ?? null,
           issueLng: draft.location.issue?.lng ?? null,
           device: draft.location.device,
+          acknowledgedFake,
           photos: photos.map((photo) => ({
             dataUrl: photo.dataUrl,
             mime: photo.mime,
