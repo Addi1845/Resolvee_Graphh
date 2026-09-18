@@ -146,7 +146,46 @@ function ReportPage() {
     setStep(STEPS[Math.max(STEPS.indexOf(step) - 1, 0)]!);
   }
 
-  async function handleSubmit() {
+  // Review-step check: the assistant reads the report before it is filed, so a
+  // possible duplicate or an implausible report is shown to the citizen first.
+  async function runPrecheck() {
+    setPrecheckBusy(true);
+    setPrecheckFailed(false);
+    try {
+      const outcome = await runCheck({
+        data: {
+          title: draft.title,
+          description: draft.description,
+          language: locale,
+          locationText: draft.location.locationText,
+          landmark: draft.location.landmark,
+          issueLat: draft.location.issue?.lat ?? null,
+          issueLng: draft.location.issue?.lng ?? null,
+          photos: photos
+            .filter((photo) => photo.kind !== "video")
+            .map((photo) => ({
+              dataUrl: photo.dataUrl,
+              mime: photo.mime,
+              kind: photo.kind,
+              source: photo.source,
+            })),
+        },
+      });
+      setPrecheck(outcome);
+    } catch {
+      setPrecheckFailed(true);
+    } finally {
+      setPrecheckBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (step !== "review" || precheck || precheckBusy || precheckFailed) return;
+    void runPrecheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  async function handleSubmit(acknowledgedFake = false) {
     for (const current of STEPS) {
       const problem = validateStep(current);
       if (problem) {
@@ -154,6 +193,12 @@ function ReportPage() {
         return setError(problem);
       }
     }
+    // Suspected-fake reports are never blocked: the citizen is warned and decides.
+    if (precheck?.suspectedFake && !acknowledgedFake) {
+      setConfirmFake(true);
+      return;
+    }
+    setConfirmFake(false);
     setBusy(true);
     setError(null);
     try {
