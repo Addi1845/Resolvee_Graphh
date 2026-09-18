@@ -73,12 +73,14 @@ export function SiteHeader() {
           </div>
           {session ? (
             <>
+              {!isStaff ? (
               <Link
                 to="/my-complaints"
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
                 {t("app.auth.myDashboard")}
               </Link>
+              ) : null}
               {isStaff ? (
               <Link
                 to="/dashboard"
@@ -130,7 +132,7 @@ export function SiteHeader() {
         className={`border-t border-primary-foreground/15 bg-primary ${menuOpen ? "block" : "hidden"} lg:block`}
       >
         <ul className="mx-auto flex max-w-7xl flex-col px-4 lg:flex-row lg:gap-1 lg:px-2">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <li key={item.to}>
               <Link
                 to={item.to}
@@ -156,6 +158,7 @@ export function SiteHeader() {
           <li className="md:hidden">
             {session ? (
               <div className="flex flex-col">
+                {!isStaff ? (
                 <Link
                   to="/my-complaints"
                   onClick={() => setMenuOpen(false)}
@@ -163,6 +166,7 @@ export function SiteHeader() {
                 >
                   {t("app.auth.myDashboard")}
                 </Link>
+                ) : null}
                 {isStaff ? (
                 <Link
                   to="/dashboard"
