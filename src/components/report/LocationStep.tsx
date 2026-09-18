@@ -58,7 +58,8 @@ export function LocationStep({
         onChange({
           ...value,
           device: observation,
-          issue: value.issue ?? { lat: observation.lat, lng: observation.lng },
+          // The map pin always comes from the device GPS — never from tapping the map.
+          issue: { lat: observation.lat, lng: observation.lng },
         });
         setBusy(false);
       },
@@ -114,10 +115,7 @@ export function LocationStep({
               </div>
             }
           >
-            <NashikLocationPicker
-              value={value.issue}
-              onChange={(issue) => onChange({ ...value, issue })}
-            />
+            <NashikLocationPicker value={value.issue} />
           </Suspense>
         ) : (
           <div className="flex h-80 items-center justify-center rounded-sm border border-border bg-muted/30 text-sm text-muted-foreground">
