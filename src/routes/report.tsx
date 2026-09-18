@@ -291,6 +291,19 @@ function ReportPage() {
           </p>
         </div>
 
+        {result.integrityFlag === "suspected_fake" ? (
+          <p className="mt-4 flex items-start gap-2 rounded-sm border border-warning/40 bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-foreground">
+            <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {t("app.precheck.filedFake")}
+          </p>
+        ) : null}
+        {result.duplicateSuspect ? (
+          <p className="mt-3 flex items-start gap-2 rounded-sm border border-info/40 bg-info-soft px-4 py-3 text-sm text-foreground">
+            <Copy aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {t("app.precheck.filedDuplicate")}
+          </p>
+        ) : null}
+
         <section className="mt-6 rounded-sm border border-border bg-surface p-5">
           <h2 className="text-lg font-bold text-primary">{t("app.triage.resultTitle")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
