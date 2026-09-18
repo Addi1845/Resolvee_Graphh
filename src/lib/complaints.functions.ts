@@ -54,6 +54,8 @@ export type ComplaintInput = {
   issueLng?: number | null;
   device?: DeviceObservation | null;
   photos?: PhotoInput[];
+  /** The citizen saw the "this may not be genuine" warning and chose to file anyway. */
+  acknowledgedFake?: boolean;
 };
 
 function str(value: unknown, max: number): string {
@@ -209,36 +211,52 @@ async function scopedComplaintIds(
 }
 
 /**
- * Compare a new report with recent ones and store suggested duplicate links.
- * Suggestions only: two reports are never merged without an officer's decision.
+ * Read-only duplicate scan. Returns the recent reports that look like the same
+ * problem. Nothing is written and nothing is merged.
  */
-async function suggestDuplicates(input: {
-  id: string;
+async function findDuplicateCandidates(input: {
+  id?: string;
   category: string;
   text: string;
   lat: number | null;
   lng: number | null;
-}): Promise<{ trackingCode: string; score: number; reasons: string[] }[]> {
+}): Promise<
+  {
+    id: string;
+    trackingCode: string;
+    title: string;
+    locationText: string;
+    status: string;
+    createdAt: string;
+    score: number;
+    reasons: string[];
+  }[]
+> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const since = new Date(Date.now() - DUPLICATE_POLICY.windowDays * 86_400_000).toISOString();
 
-  const { data: recent } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("complaints")
-    .select("id, tracking_code, category, title, description, location_text, issue_lat, issue_lng")
+    .select(
+      "id, tracking_code, category, title, description, location_text, status, created_at, issue_lat, issue_lng",
+    )
     .eq("category", input.category)
-    .neq("id", input.id)
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(60);
+  if (input.id) query = query.neq("id", input.id);
 
-  const matches: { trackingCode: string; score: number; reasons: string[] }[] = [];
-  const rows: {
-    complaint_id: string;
-    related_complaint_id: string;
-    similarity: number;
-    reason: string;
-    state: string;
-    source: string;
+  const { data: recent } = await query;
+
+  const matches: {
+    id: string;
+    trackingCode: string;
+    title: string;
+    locationText: string;
+    status: string;
+    createdAt: string;
+    score: number;
+    reasons: string[];
   }[] = [];
 
   for (const candidate of recent ?? []) {
@@ -252,12 +270,50 @@ async function suggestDuplicates(input: {
       },
     );
     if (score < DUPLICATE_POLICY.minScore) continue;
-    matches.push({ trackingCode: candidate.tracking_code, score, reasons });
+    matches.push({
+      id: candidate.id,
+      trackingCode: candidate.tracking_code,
+      title: candidate.title,
+      locationText: candidate.location_text,
+      status: candidate.status,
+      createdAt: candidate.created_at,
+      score,
+      reasons,
+    });
+  }
+
+  return matches.sort((a, b) => b.score - a.score).slice(0, 5);
+}
+
+/**
+ * Compare a new report with recent ones and store suggested duplicate links.
+ * Suggestions only: two reports are never merged without an officer's decision.
+ */
+async function suggestDuplicates(input: {
+  id: string;
+  category: string;
+  text: string;
+  lat: number | null;
+  lng: number | null;
+}): Promise<{ trackingCode: string; score: number; reasons: string[] }[]> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const matches = await findDuplicateCandidates(input);
+
+  const rows: {
+    complaint_id: string;
+    related_complaint_id: string;
+    similarity: number;
+    reason: string;
+    state: string;
+    source: string;
+  }[] = [];
+
+  for (const candidate of matches) {
     rows.push({
       complaint_id: input.id,
       related_complaint_id: candidate.id,
-      similarity: score,
-      reason: reasons.join("; "),
+      similarity: candidate.score,
+      reason: candidate.reasons.join("; "),
       state: "suggested",
       source: "rule_based_demo",
     });
@@ -270,8 +326,68 @@ async function suggestDuplicates(input: {
     if (error) console.error("duplicate suggestion insert failed", error.message);
   }
 
-  return matches.sort((a, b) => b.score - a.score).slice(0, 5);
+  return matches.map((match) => ({
+    trackingCode: match.trackingCode,
+    score: match.score,
+    reasons: match.reasons,
+  }));
 }
+
+/**
+ * Review-step check, run before the complaint is filed. It reads the text and
+ * photos with the assistant, looks for recent reports about the same problem,
+ * and reports a plausibility concern. Nothing is saved here.
+ */
+export const precheckComplaint = createServerFn({ method: "POST" })
+  .inputValidator((input: ComplaintInput) => ({
+    title: str(input.title, 160),
+    description: str(input.description, 4000),
+    locationText: str(input.locationText, 300),
+    landmark: str(input.landmark, 200),
+    issueLat: num(input.issueLat),
+    issueLng: num(input.issueLng),
+    photos: (input.photos ?? []).filter((item) => item.kind !== "video").slice(0, 3),
+  }))
+  .handler(async ({ data }) => {
+    const { triageComplaint } = await import("@/lib/ai-triage.server");
+    const { resolveDepartments } = await import("@/lib/routing");
+
+    const analysisText = `${data.title}\n${data.description}\nLocation: ${data.locationText} ${data.landmark}`;
+    const triage = await triageComplaint({
+      text: analysisText,
+      photoDataUrls: data.photos.map((photo) => photo.dataUrl),
+    });
+
+    const duplicates = await findDuplicateCandidates({
+      category: triage.category,
+      text: `${data.title} ${data.description} ${data.locationText}`,
+      lat: data.issueLat,
+      lng: data.issueLng,
+    });
+
+    return {
+      method: triage.method,
+      category: triage.category,
+      summary: triage.summary,
+      hazards: triage.hazards,
+      severity: triage.severity,
+      evidence: triage.evidence,
+      needsReview: triage.needsReview,
+      suspectedFake: triage.authenticityConcern,
+      fakeReasons: triage.authenticityReasons,
+      departments: resolveDepartments(triage.category, triage.supportingCategories).map(
+        (entry) => ({ code: entry.code, role: entry.role }),
+      ),
+      duplicates: duplicates.map((match) => ({
+        trackingCode: match.trackingCode,
+        title: match.title,
+        locationText: match.locationText,
+        status: match.status,
+        score: match.score,
+        reasons: match.reasons,
+      })),
+    };
+  });
 
 
 export const submitComplaint = createServerFn({ method: "POST" })
@@ -321,6 +437,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
       issueLng,
       device,
       photos,
+      acknowledgedFake: input.acknowledgedFake === true,
     };
   })
   .handler(async ({ data }) => {
@@ -415,6 +532,10 @@ export const submitComplaint = createServerFn({ method: "POST" })
           },
           priority_policy_version: priority.policyVersion,
           priority: priority.band,
+          // Plausibility is a flag for an officer, never an automatic rejection.
+          integrity_flag: triage.authenticityConcern ? "suspected_fake" : "none",
+          integrity_reasons: triage.authenticityConcern ? triage.authenticityReasons : [],
+          integrity_acknowledged: data.acknowledgedFake,
         })
         .select("id, tracking_code, created_at")
         .single();
@@ -477,7 +598,17 @@ export const submitComplaint = createServerFn({ method: "POST" })
           lng: data.issueLng,
         });
 
+        if (duplicates.length > 0) {
+          await supabaseAdmin
+            .from("complaints")
+            .update({ duplicate_suspect: true })
+            .eq("id", row.id);
+        }
+
         return {
+          integrityFlag: triage.authenticityConcern ? "suspected_fake" : "none",
+          integrityReasons: triage.authenticityReasons,
+          duplicateSuspect: duplicates.length > 0,
           duplicateSuggestions: duplicates,
           trackingCode: row.tracking_code,
           createdAt: row.created_at,
@@ -1151,4 +1282,61 @@ export const getComplaintDetail = createServerFn({ method: "POST" })
       verifications: verifications ?? [],
       photos: await signedPhotoUrls(complaint.id),
     };
+  });
+
+/**
+ * Flagged reports queue for departments: complaints the assistant judged
+ * implausible, and complaints that look like a repeat of an existing report.
+ * Both lists are suggestions — an officer decides what happens.
+ */
+export const listFlaggedComplaints = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const scope = await staffScope(context);
+    const allowed = scope.all ? null : await scopedComplaintIds(context, scope.departmentIds);
+    if (allowed && allowed.length === 0) {
+      return { fake: [], duplicates: [] };
+    }
+
+    const columns =
+      "id, tracking_code, title, category, status, location_text, created_at, integrity_flag, integrity_reasons, integrity_acknowledged, duplicate_suspect";
+
+    let fakeQuery = context.supabase
+      .from("complaints")
+      .select(columns)
+      .eq("integrity_flag", "suspected_fake")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    let dupQuery = context.supabase
+      .from("complaints")
+      .select(columns)
+      .eq("duplicate_suspect", true)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (allowed) {
+      fakeQuery = fakeQuery.in("id", allowed);
+      dupQuery = dupQuery.in("id", allowed);
+    }
+
+    const [{ data: fake }, { data: dup }] = await Promise.all([fakeQuery, dupQuery]);
+    return { fake: fake ?? [], duplicates: dup ?? [] };
+  });
+
+/** An officer clears a plausibility flag after looking at the evidence. */
+export const clearIntegrityFlag = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string }) => ({ id: str(input.id, 40) }))
+  .handler(async ({ data, context }) => {
+    const staffRoles = await requireStaff(context);
+    if (!staffRoles.some((role) => role !== "auditor")) throw new Error("READ_ONLY_ROLE");
+    const { error } = await context.supabase
+      .from("complaints")
+      .update({ integrity_flag: "cleared" })
+      .eq("id", data.id);
+    if (error) {
+      console.error("clearIntegrityFlag failed", error.message);
+      throw new Error("UPDATE_FAILED");
+    }
+    return { ok: true };
   });

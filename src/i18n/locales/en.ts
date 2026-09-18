@@ -352,6 +352,44 @@ export const en = {
       severityTitle: "Severity",
       severities: { low: "Low", medium: "Medium", high: "High" },
     },
+    precheck: {
+      title: "AI check before you submit",
+      running: "Checking your report with the assistant…",
+      rerun: "Run the check again",
+      failed: "The check could not run. You can still submit your report.",
+      detected: "Likely problem type",
+      summary: "What the assistant sees",
+      duplicatesTitle: "Similar reports already received",
+      duplicatesNone: "No similar report was found in the last few days.",
+      duplicateMatch: "Similarity",
+      duplicateNote:
+        "If this is the same problem, an officer will link the reports. Nothing is merged automatically.",
+      clean: "Nothing looks unusual in this report.",
+      fakeTitle: "This report may not be genuine",
+      fakeReasons: "Why the assistant is unsure",
+      fakeHint: "The assistant can be wrong. A human officer makes the final decision.",
+      confirmBody:
+        "The assistant could not confirm that your photos and description show a real civic problem. You can go back and add a clearer photo, or submit anyway.",
+      confirmProceed: "Submit anyway",
+      confirmCancel: "Go back and edit",
+      filedFake:
+        "Your report was filed and placed in the flagged section. An officer will check it before any work starts.",
+      filedDuplicate:
+        "Similar reports already exist. An officer will check whether this is the same problem.",
+    },
+    flagged: {
+      title: "Flagged reports",
+      intro:
+        "Reports the assistant was unsure about, and reports that look like a repeat. Both are suggestions for your decision.",
+      fakeTitle: "Possibly not genuine",
+      fakeEmpty: "No report is flagged as possibly not genuine.",
+      dupTitle: "Possible duplicate reports",
+      dupEmpty: "No report is marked as a possible duplicate.",
+      reasons: "Why it was flagged",
+      acknowledged: "The citizen was warned and chose to submit.",
+      clear: "Mark as genuine",
+      open: "Open report",
+    },
     voice: {
       start: "Speak instead of typing",
       stop: "Stop recording",

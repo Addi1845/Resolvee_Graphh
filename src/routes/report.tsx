@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, ChevronLeft, ChevronRight, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Loader2,
+  Send,
+  ShieldAlert,
+} from "lucide-react";
 
 import { useI18n } from "@/i18n";
 import { LocationStep, type LocationDraft } from "@/components/report/LocationStep";
@@ -9,7 +18,7 @@ import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
 import { VoiceInput } from "@/components/report/VoiceInput";
 import { AiAnalysisStatus } from "@/components/report/AiAnalysisStatus";
 import { NashikGate } from "@/components/report/NashikGate";
-import { submitComplaint } from "@/lib/complaints.functions";
+import { precheckComplaint, submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 import { useStaffAccess } from "@/hooks/useStaffAccess";
 
@@ -58,9 +67,12 @@ const emptyDraft: Draft = {
   location: { locationText: "", landmark: "", issue: null, device: null },
 };
 
+type Precheck = Awaited<ReturnType<typeof precheckComplaint>>;
+
 function ReportPage() {
   const { t, locale } = useI18n();
   const submit = useServerFn(submitComplaint);
+  const runCheck = useServerFn(precheckComplaint);
   const { isStaff } = useStaffAccess();
 
   const [step, setStep] = useState<Step>("describe");
@@ -77,7 +89,13 @@ function ReportPage() {
     method: string;
     needsReview: boolean;
     departments: { code: string; role: string }[];
+    integrityFlag: string;
+    duplicateSuspect: boolean;
   } | null>(null);
+  const [precheck, setPrecheck] = useState<Precheck | null>(null);
+  const [precheckBusy, setPrecheckBusy] = useState(false);
+  const [precheckFailed, setPrecheckFailed] = useState(false);
+  const [confirmFake, setConfirmFake] = useState(false);
 
   // Restore the saved draft before the fields become editable, so a restore
   // never overwrites something the person has already started typing.
@@ -128,7 +146,46 @@ function ReportPage() {
     setStep(STEPS[Math.max(STEPS.indexOf(step) - 1, 0)]!);
   }
 
-  async function handleSubmit() {
+  // Review-step check: the assistant reads the report before it is filed, so a
+  // possible duplicate or an implausible report is shown to the citizen first.
+  async function runPrecheck() {
+    setPrecheckBusy(true);
+    setPrecheckFailed(false);
+    try {
+      const outcome = await runCheck({
+        data: {
+          title: draft.title,
+          description: draft.description,
+          language: locale,
+          locationText: draft.location.locationText,
+          landmark: draft.location.landmark,
+          issueLat: draft.location.issue?.lat ?? null,
+          issueLng: draft.location.issue?.lng ?? null,
+          photos: photos
+            .filter((photo) => photo.kind !== "video")
+            .map((photo) => ({
+              dataUrl: photo.dataUrl,
+              mime: photo.mime,
+              kind: photo.kind,
+              source: photo.source,
+            })),
+        },
+      });
+      setPrecheck(outcome);
+    } catch {
+      setPrecheckFailed(true);
+    } finally {
+      setPrecheckBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (step !== "review" || precheck || precheckBusy || precheckFailed) return;
+    void runPrecheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  async function handleSubmit(acknowledgedFake = false) {
     for (const current of STEPS) {
       const problem = validateStep(current);
       if (problem) {
@@ -136,6 +193,12 @@ function ReportPage() {
         return setError(problem);
       }
     }
+    // Suspected-fake reports are never blocked: the citizen is warned and decides.
+    if (precheck?.suspectedFake && !acknowledgedFake) {
+      setConfirmFake(true);
+      return;
+    }
+    setConfirmFake(false);
     setBusy(true);
     setError(null);
     try {
@@ -151,6 +214,7 @@ function ReportPage() {
           issueLat: draft.location.issue?.lat ?? null,
           issueLng: draft.location.issue?.lng ?? null,
           device: draft.location.device,
+          acknowledgedFake,
           photos: photos.map((photo) => ({
             dataUrl: photo.dataUrl,
             mime: photo.mime,
@@ -166,6 +230,10 @@ function ReportPage() {
         method: response.analysisMethod,
         needsReview: response.needsReview,
         departments: response.departments,
+        integrityFlag:
+          "integrityFlag" in response ? (response.integrityFlag as string) : "none",
+        duplicateSuspect:
+          "duplicateSuspect" in response ? (response.duplicateSuspect as boolean) : false,
       });
       window.localStorage.removeItem(DRAFT_KEY);
     } catch (submitError) {
@@ -223,6 +291,19 @@ function ReportPage() {
             {result.code}
           </p>
         </div>
+
+        {result.integrityFlag === "suspected_fake" ? (
+          <p className="mt-4 flex items-start gap-2 rounded-sm border border-warning/40 bg-warning-soft px-4 py-3 text-sm font-semibold text-warning-foreground">
+            <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {t("app.precheck.filedFake")}
+          </p>
+        ) : null}
+        {result.duplicateSuspect ? (
+          <p className="mt-3 flex items-start gap-2 rounded-sm border border-info/40 bg-info-soft px-4 py-3 text-sm text-foreground">
+            <Copy aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {t("app.precheck.filedDuplicate")}
+          </p>
+        ) : null}
 
         <section className="mt-6 rounded-sm border border-border bg-surface p-5">
           <h2 className="text-lg font-bold text-primary">{t("app.triage.resultTitle")}</h2>
@@ -480,7 +561,157 @@ function ReportPage() {
                 </div>
               ))}
             </dl>
+
+            <section className="rounded-sm border border-border bg-surface p-5">
+              <h3 className="text-base font-bold text-primary">{t("app.precheck.title")}</h3>
+
+              {precheckBusy ? (
+                <p
+                  role="status"
+                  className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin text-primary" />
+                  {t("app.precheck.running")}
+                </p>
+              ) : precheckFailed ? (
+                <div className="mt-3">
+                  <p className="text-sm text-muted-foreground">{t("app.precheck.failed")}</p>
+                  <button
+                    type="button"
+                    onClick={() => void runPrecheck()}
+                    className="mt-2 inline-flex min-h-10 items-center rounded-sm border border-border-strong px-4 text-sm font-semibold text-foreground hover:bg-muted"
+                  >
+                    {t("app.precheck.rerun")}
+                  </button>
+                </div>
+              ) : precheck ? (
+                <div className="mt-3 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {precheck.method === "ai_vision"
+                      ? t("app.triage.methodAi")
+                      : t("app.triage.methodRule")}
+                  </p>
+                  <p className="text-base text-foreground">
+                    <span className="font-semibold">{t("app.precheck.detected")}: </span>
+                    {t(`app.categories.${precheck.category}`)}
+                  </p>
+                  {precheck.summary ? (
+                    <p className="text-sm text-foreground">
+                      <span className="font-semibold">{t("app.precheck.summary")}: </span>
+                      {precheck.summary}
+                    </p>
+                  ) : null}
+
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t("app.precheck.duplicatesTitle")}
+                    </p>
+                    {precheck.duplicates.length === 0 ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("app.precheck.duplicatesNone")}
+                      </p>
+                    ) : (
+                      <>
+                        <ul className="mt-2 space-y-2">
+                          {precheck.duplicates.map((item) => (
+                            <li
+                              key={item.trackingCode}
+                              className="rounded-sm border border-info/40 bg-info-soft px-3 py-2 text-sm text-foreground"
+                            >
+                              <span className="font-semibold">{item.trackingCode}</span> ·{" "}
+                              {item.title}
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {t("app.precheck.duplicateMatch")}:{" "}
+                                {Math.round(item.score * 100)}%
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {t("app.precheck.duplicateNote")}
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {precheck.suspectedFake ? (
+                    <div className="rounded-sm border border-warning/40 bg-warning-soft px-4 py-3">
+                      <p className="flex items-center gap-2 text-sm font-bold text-warning-foreground">
+                        <AlertTriangle aria-hidden="true" className="size-4" />
+                        {t("app.precheck.fakeTitle")}
+                      </p>
+                      {precheck.fakeReasons.length > 0 ? (
+                        <>
+                          <p className="mt-2 text-xs font-semibold text-warning-foreground">
+                            {t("app.precheck.fakeReasons")}
+                          </p>
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-foreground">
+                            {precheck.fakeReasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : null}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t("app.precheck.fakeHint")}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-success-foreground">{t("app.precheck.clean")}</p>
+                  )}
+                </div>
+              ) : null}
+            </section>
           </>
+        ) : null}
+
+        {confirmFake ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fake-confirm-title"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 px-4"
+          >
+            <div className="w-full max-w-md rounded-sm border border-border bg-surface p-6 shadow-card">
+              <h2
+                id="fake-confirm-title"
+                className="flex items-center gap-2 text-lg font-bold text-warning-foreground"
+              >
+                <AlertTriangle aria-hidden="true" className="size-5" />
+                {t("app.precheck.fakeTitle")}
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-foreground">
+                {t("app.precheck.confirmBody")}
+              </p>
+              {precheck?.fakeReasons.length ? (
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {precheck.fakeReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="mt-3 text-sm text-muted-foreground">{t("app.precheck.filedFake")}</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmFake(false);
+                    setStep("attach");
+                  }}
+                  className="inline-flex min-h-12 items-center rounded-sm border border-border-strong px-5 text-base font-semibold text-foreground hover:bg-muted"
+                >
+                  {t("app.precheck.confirmCancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit(true)}
+                  className="inline-flex min-h-12 items-center rounded-sm bg-primary px-5 text-base font-semibold text-primary-foreground hover:bg-secondary"
+                >
+                  {t("app.precheck.confirmProceed")}
+                </button>
+              </div>
+            </div>
+          </div>
         ) : null}
 
         {error ? (
