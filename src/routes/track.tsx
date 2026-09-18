@@ -63,6 +63,12 @@ function TrackPage() {
 
 
   const complaint = result?.found ? result.complaint : null;
+  const notes = (complaint?.analysis_notes ?? null) as {
+    summary?: string;
+    hazards?: string[];
+    severity?: "low" | "medium" | "high";
+    supporting_evidence?: string[];
+  } | null;
   const routed = result?.found ? (result.routedDepartments ?? []) : [];
   const department = complaint?.departments;
   const departmentName = department
