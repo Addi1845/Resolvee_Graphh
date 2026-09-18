@@ -421,6 +421,8 @@ export const hi: Dictionary = {
       error: "साइन इन विफल रहा। ईमेल और पासवर्ड जाँचें।",
       signOut: "साइन आउट",
       dashboard: "डैशबोर्ड",
+      staffNoReport: "आप अधिकारी के रूप में साइन इन हैं। शिकायत दर्ज करना नागरिकों के लिए है।",
+      goToDashboard: "अधिकारी डैशबोर्ड पर जाएँ",
     },
     dashboard: {
       title: "शिकायत डैशबोर्ड",
