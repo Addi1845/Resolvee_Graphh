@@ -211,6 +211,18 @@ export const en = {
         "This live map only shows your location. The pin is placed automatically from your phone's GPS when you use “Use my current location” — it cannot be moved by hand, so a complaint cannot be filed from somewhere else.",
       pinRequired: "Please use “Use my current location” below so we can detect where you are.",
       pinSelected: "Location detected from your device: {lat}, {lng}",
+      gate: {
+        title: "Confirm you are in Nashik",
+        intro:
+          "This service accepts complaints only from within the Nashik municipal area. We will check your device location once before you continue.",
+        checking: "Checking your location…",
+        outside:
+          "Your device location is outside the Nashik service area, so you cannot file a complaint here. If you are actually in Nashik, move to a spot with a clearer GPS signal and try again.",
+        blocked:
+          "We could not read your location. Please allow location access in your browser and try again — it is required to file a complaint.",
+        retry: "Check again",
+        goHome: "Back to the homepage",
+      },
       outsideNashik: "This portal currently accepts locations within Nashik only.",
       states: {
         unavailable: "Device location not shared",

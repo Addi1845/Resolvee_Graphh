@@ -8,6 +8,7 @@ import { LocationStep, type LocationDraft } from "@/components/report/LocationSt
 import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
 import { VoiceInput } from "@/components/report/VoiceInput";
 import { AiAnalysisStatus } from "@/components/report/AiAnalysisStatus";
+import { NashikGate } from "@/components/report/NashikGate";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 import { useStaffAccess } from "@/hooks/useStaffAccess";
@@ -66,6 +67,7 @@ function ReportPage() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [photos, setPhotos] = useState<DraftPhoto[]>([]);
   const [ready, setReady] = useState(false);
+  const [gatePassed, setGatePassed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
@@ -289,6 +291,23 @@ function ReportPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
+      {!gatePassed ? (
+        <NashikGate
+          onAllowed={(observation) => {
+            // Confirmed inside Nashik — prefill the location pin from this GPS
+            // reading so the citizen never has to (or can) place it by hand.
+            setDraft((current) => ({
+              ...current,
+              location: {
+                ...current.location,
+                device: observation,
+                issue: { lat: observation.lat, lng: observation.lng },
+              },
+            }));
+            setGatePassed(true);
+          }}
+        />
+      ) : null}
       <h1 className="text-3xl font-bold text-primary sm:text-4xl">{t("app.report.title")}</h1>
       <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{t("app.report.intro")}</p>
 
