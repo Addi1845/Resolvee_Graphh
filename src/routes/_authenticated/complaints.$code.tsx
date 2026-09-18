@@ -211,7 +211,14 @@ function ComplaintReportPage() {
             </dl>
           </section>
 
-          <ResolutionGraph status={complaint.status} reachedStatuses={reached} />
+          <ResolutionGraph
+            status={complaint.status}
+            reachedStatuses={reached}
+            canEdit={canUpdate}
+            savingStage={savingStage}
+            message={stageMessage}
+            onSelect={(stage) => void changeStage(complaint.id, stage)}
+          />
 
           <section className="rounded-sm border border-border bg-surface p-5 shadow-card">
             <h2 className="text-xl font-bold text-primary">{t("app.triage.departments")}</h2>
