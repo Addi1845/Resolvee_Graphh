@@ -335,6 +335,11 @@ export const hi: Dictionary = {
       methodRule: "डेमो / नियम-आधारित विश्लेषण — लाइव मॉडल उपलब्ध नहीं था।",
       reviewNote:
         "यह केवल सुझाव है। काम शुरू होने से पहले अधिकारी इसकी पुष्टि या सुधार करते हैं।",
+      observedTitle: "AI सहायक ने आपकी शिकायत में क्या देखा",
+      evidenceTitle: "जिन सबूतों पर इसने भरोसा किया",
+      hazardsTitle: "दिखाई दिए गए खतरे",
+      severityTitle: "गंभीरता",
+      severities: { low: "कम", medium: "मध्यम", high: "अधिक" },
     },
     voice: {
       start: "टाइप करने के बजाय बोलिए",

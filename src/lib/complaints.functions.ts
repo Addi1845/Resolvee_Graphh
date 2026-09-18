@@ -538,7 +538,7 @@ export const trackComplaint = createServerFn({ method: "POST" })
     const { data: complaint } = await supabaseAdmin
       .from("complaints")
       .select(
-        "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, due_date, resolution_note, created_at, updated_at, analysis_status, analysis_method, suggested_category, proximity_state, proximity_distance_m, departments(name_en, name_hi, name_mr)",
+        "id, tracking_code, category, title, description, location_text, landmark, status, priority, priority_score, priority_band, due_date, resolution_note, created_at, updated_at, analysis_status, analysis_method, analysis_notes, suggested_category, proximity_state, proximity_distance_m, departments(name_en, name_hi, name_mr)",
       )
       .eq("tracking_code", data.code)
       .maybeSingle();

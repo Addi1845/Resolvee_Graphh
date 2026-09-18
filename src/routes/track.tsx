@@ -63,6 +63,12 @@ function TrackPage() {
 
 
   const complaint = result?.found ? result.complaint : null;
+  const notes = (complaint?.analysis_notes ?? null) as {
+    summary?: string;
+    hazards?: string[];
+    severity?: "low" | "medium" | "high";
+    supporting_evidence?: string[];
+  } | null;
   const routed = result?.found ? (result.routedDepartments ?? []) : [];
   const department = complaint?.departments;
   const departmentName = department
@@ -228,13 +234,54 @@ function TrackPage() {
                 ? t("app.triage.methodAi")
                 : t("app.analysis.demoLabel")}
             </p>
-            <p className="mt-1 text-muted-foreground">
+
+            {notes?.summary ? (
+              <div className="mt-3">
+                <p className="font-semibold text-foreground">
+                  {t("app.triage.observedTitle")}
+                </p>
+                <p className="mt-1 text-base text-foreground">{notes.summary}</p>
+              </div>
+            ) : null}
+
+            {notes?.supporting_evidence && notes.supporting_evidence.length > 0 ? (
+              <div className="mt-3">
+                <p className="font-semibold text-foreground">
+                  {t("app.triage.evidenceTitle")}
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-foreground">
+                  {notes.supporting_evidence.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {notes?.hazards && notes.hazards.length > 0 ? (
+              <div className="mt-3">
+                <p className="font-semibold text-warning-foreground">
+                  {t("app.triage.hazardsTitle")}
+                </p>
+                <ul className="mt-1 list-disc space-y-1 pl-5 text-foreground">
+                  {notes.hazards.map((item, index) => (
+                    <li key={index}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            <p className="mt-3 text-muted-foreground">
               {t("app.analysis.priority")}:{" "}
               {complaint.priority_band
                 ? `${t(`app.analysis.bands.${complaint.priority_band}`)} · ${complaint.priority_score ?? "—"}/100`
                 : "—"}
             </p>
-            <p className="mt-1 text-muted-foreground">{t("app.analysis.needsReview")}</p>
+            {notes?.severity ? (
+              <p className="mt-1 text-muted-foreground">
+                {t("app.triage.severityTitle")}: {t(`app.triage.severities.${notes.severity}`)}
+              </p>
+            ) : null}
+            <p className="mt-2 text-muted-foreground">{t("app.analysis.needsReview")}</p>
           </div>
 
           {complaint.resolution_note ? (
