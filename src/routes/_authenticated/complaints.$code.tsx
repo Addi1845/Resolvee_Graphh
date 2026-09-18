@@ -6,7 +6,7 @@ import { ArrowLeft, Copy, Printer } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
 import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
-import { getComplaintDetail } from "@/lib/complaints.functions";
+import { getComplaintDetail, getMyAccess, updateComplaintStatus } from "@/lib/complaints.functions";
 
 export const Route = createFileRoute("/_authenticated/complaints/$code")({
   head: () => ({
