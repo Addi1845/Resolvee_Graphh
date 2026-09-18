@@ -306,23 +306,12 @@ async function suggestDuplicates(input: {
     source: string;
   }[] = [];
 
-  for (const candidate of recent ?? []) {
-    const { score, reasons } = scoreDuplicate(
-      { category: input.category, text: input.text, lat: input.lat, lng: input.lng },
-      {
-        category: candidate.category,
-        text: `${candidate.title} ${candidate.description} ${candidate.location_text}`,
-        lat: candidate.issue_lat,
-        lng: candidate.issue_lng,
-      },
-    );
-    if (score < DUPLICATE_POLICY.minScore) continue;
-    matches.push({ trackingCode: candidate.tracking_code, score, reasons });
+  for (const candidate of matches) {
     rows.push({
       complaint_id: input.id,
       related_complaint_id: candidate.id,
-      similarity: score,
-      reason: reasons.join("; "),
+      similarity: candidate.score,
+      reason: candidate.reasons.join("; "),
       state: "suggested",
       source: "rule_based_demo",
     });
@@ -335,8 +324,68 @@ async function suggestDuplicates(input: {
     if (error) console.error("duplicate suggestion insert failed", error.message);
   }
 
-  return matches.sort((a, b) => b.score - a.score).slice(0, 5);
+  return matches.map((match) => ({
+    trackingCode: match.trackingCode,
+    score: match.score,
+    reasons: match.reasons,
+  }));
 }
+
+/**
+ * Review-step check, run before the complaint is filed. It reads the text and
+ * photos with the assistant, looks for recent reports about the same problem,
+ * and reports a plausibility concern. Nothing is saved here.
+ */
+export const precheckComplaint = createServerFn({ method: "POST" })
+  .inputValidator((input: ComplaintInput) => ({
+    title: str(input.title, 160),
+    description: str(input.description, 4000),
+    locationText: str(input.locationText, 300),
+    landmark: str(input.landmark, 200),
+    issueLat: num(input.issueLat),
+    issueLng: num(input.issueLng),
+    photos: (input.photos ?? []).filter((item) => item.kind !== "video").slice(0, 3),
+  }))
+  .handler(async ({ data }) => {
+    const { triageComplaint } = await import("@/lib/ai-triage.server");
+    const { resolveDepartments } = await import("@/lib/routing");
+
+    const analysisText = `${data.title}\n${data.description}\nLocation: ${data.locationText} ${data.landmark}`;
+    const triage = await triageComplaint({
+      text: analysisText,
+      photoDataUrls: data.photos.map((photo) => photo.dataUrl),
+    });
+
+    const duplicates = await findDuplicateCandidates({
+      category: triage.category,
+      text: `${data.title} ${data.description} ${data.locationText}`,
+      lat: data.issueLat,
+      lng: data.issueLng,
+    });
+
+    return {
+      method: triage.method,
+      category: triage.category,
+      summary: triage.summary,
+      hazards: triage.hazards,
+      severity: triage.severity,
+      evidence: triage.evidence,
+      needsReview: triage.needsReview,
+      suspectedFake: triage.authenticityConcern,
+      fakeReasons: triage.authenticityReasons,
+      departments: resolveDepartments(triage.category, triage.supportingCategories).map(
+        (entry) => ({ code: entry.code, role: entry.role }),
+      ),
+      duplicates: duplicates.map((match) => ({
+        trackingCode: match.trackingCode,
+        title: match.title,
+        locationText: match.locationText,
+        status: match.status,
+        score: match.score,
+        reasons: match.reasons,
+      })),
+    };
+  });
 
 
 export const submitComplaint = createServerFn({ method: "POST" })
