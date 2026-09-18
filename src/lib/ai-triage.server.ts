@@ -61,6 +61,8 @@ function ruleBased(text: string, note?: string): TriageResult {
     severity: "medium",
     evidence: suggestion.matched,
     needsReview: true,
+    authenticityConcern: false,
+    authenticityReasons: [],
     ...(note ? { note } : {}),
   };
 }
@@ -79,6 +81,8 @@ const RESPONSE_SCHEMA = {
     severity: { type: "string", enum: [...SEVERITIES] },
     supporting_evidence: { type: "array", items: { type: "string" } },
     needs_review: { type: "boolean" },
+    authenticity_concern: { type: "boolean" },
+    authenticity_reasons: { type: "array", items: { type: "string" } },
   },
   required: [
     "category_code",
@@ -88,6 +92,8 @@ const RESPONSE_SCHEMA = {
     "severity",
     "supporting_evidence",
     "needs_review",
+    "authenticity_concern",
+    "authenticity_reasons",
   ],
 } as const;
 
