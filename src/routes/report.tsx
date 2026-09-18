@@ -291,6 +291,23 @@ function ReportPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
+      {!gatePassed ? (
+        <NashikGate
+          onAllowed={(observation) => {
+            // Confirmed inside Nashik — prefill the location pin from this GPS
+            // reading so the citizen never has to (or can) place it by hand.
+            setDraft((current) => ({
+              ...current,
+              location: {
+                ...current.location,
+                device: observation,
+                issue: { lat: observation.lat, lng: observation.lng },
+              },
+            }));
+            setGatePassed(true);
+          }}
+        />
+      ) : null}
       <h1 className="text-3xl font-bold text-primary sm:text-4xl">{t("app.report.title")}</h1>
       <p className="mt-3 text-lg leading-relaxed text-muted-foreground">{t("app.report.intro")}</p>
 
