@@ -532,6 +532,10 @@ export const submitComplaint = createServerFn({ method: "POST" })
           },
           priority_policy_version: priority.policyVersion,
           priority: priority.band,
+          // Plausibility is a flag for an officer, never an automatic rejection.
+          integrity_flag: triage.authenticityConcern ? "suspected_fake" : "none",
+          integrity_reasons: triage.authenticityConcern ? triage.authenticityReasons : [],
+          integrity_acknowledged: data.acknowledgedFake,
         })
         .select("id, tracking_code, created_at")
         .single();
