@@ -10,6 +10,7 @@ import { VoiceInput } from "@/components/report/VoiceInput";
 import { AiAnalysisStatus } from "@/components/report/AiAnalysisStatus";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
+import { useStaffAccess } from "@/hooks/useStaffAccess";
 
 export const Route = createFileRoute("/report")({
   head: () => ({
@@ -59,6 +60,7 @@ const emptyDraft: Draft = {
 function ReportPage() {
   const { t, locale } = useI18n();
   const submit = useServerFn(submitComplaint);
+  const { isStaff } = useStaffAccess();
 
   const [step, setStep] = useState<Step>("describe");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
