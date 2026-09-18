@@ -62,16 +62,16 @@ export function NashikGate({
           </span>
           <div>
             <h2 id="nashik-gate-title" className="text-lg font-bold text-foreground">
-              {t("app.gate.title")}
+              {t("app.location.gate.title")}
             </h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t("app.gate.intro")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("app.location.gate.intro")}</p>
           </div>
         </div>
 
         {state === "checking" ? (
           <p role="status" className="mt-5 flex items-center gap-2 text-sm font-semibold text-foreground">
             <Loader2 aria-hidden="true" className="size-4 animate-spin text-secondary" />
-            {t("app.gate.checking")}
+            {t("app.location.gate.checking")}
           </p>
         ) : (
           <div className="mt-5 space-y-4">
@@ -80,7 +80,7 @@ export function NashikGate({
               className="flex gap-2 rounded-sm border border-warning/40 bg-warning-soft p-3 text-sm font-semibold text-warning-foreground"
             >
               <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              <span>{state === "outside" ? t("app.gate.outside") : t("app.gate.blocked")}</span>
+              <span>{state === "outside" ? t("app.location.gate.outside") : t("app.location.gate.blocked")}</span>
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <button
@@ -88,10 +88,10 @@ export function NashikGate({
                 onClick={check}
                 className="inline-flex min-h-12 items-center rounded-sm bg-secondary px-5 text-base font-semibold text-secondary-foreground hover:bg-secondary/90"
               >
-                {t("app.gate.retry")}
+                {t("app.location.gate.retry")}
               </button>
               <Link to="/" className="text-sm font-semibold text-secondary underline">
-                {t("app.gate.goHome")}
+                {t("app.location.gate.goHome")}
               </Link>
             </div>
           </div>
