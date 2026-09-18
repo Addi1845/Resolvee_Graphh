@@ -19,9 +19,18 @@ const STAGES = [
 export function ResolutionGraph({
   status,
   reachedStatuses = [],
+  canEdit = false,
+  onSelect,
+  savingStage = null,
+  message = null,
 }: {
   status: string;
   reachedStatuses?: string[];
+  /** Officers with write access can move the complaint to another stage. */
+  canEdit?: boolean;
+  onSelect?: (stage: string) => void;
+  savingStage?: string | null;
+  message?: string | null;
 }) {
   const { t } = useI18n();
   const rejected = status === "rejected";
