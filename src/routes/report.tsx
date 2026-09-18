@@ -67,9 +67,12 @@ const emptyDraft: Draft = {
   location: { locationText: "", landmark: "", issue: null, device: null },
 };
 
+type Precheck = Awaited<ReturnType<typeof precheckComplaint>>;
+
 function ReportPage() {
   const { t, locale } = useI18n();
   const submit = useServerFn(submitComplaint);
+  const runCheck = useServerFn(precheckComplaint);
   const { isStaff } = useStaffAccess();
 
   const [step, setStep] = useState<Step>("describe");
@@ -86,7 +89,13 @@ function ReportPage() {
     method: string;
     needsReview: boolean;
     departments: { code: string; role: string }[];
+    integrityFlag: string;
+    duplicateSuspect: boolean;
   } | null>(null);
+  const [precheck, setPrecheck] = useState<Precheck | null>(null);
+  const [precheckBusy, setPrecheckBusy] = useState(false);
+  const [precheckFailed, setPrecheckFailed] = useState(false);
+  const [confirmFake, setConfirmFake] = useState(false);
 
   // Restore the saved draft before the fields become editable, so a restore
   // never overwrites something the person has already started typing.
