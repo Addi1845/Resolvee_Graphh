@@ -54,6 +54,8 @@ export type ComplaintInput = {
   issueLng?: number | null;
   device?: DeviceObservation | null;
   photos?: PhotoInput[];
+  /** The citizen saw the "this may not be genuine" warning and chose to file anyway. */
+  acknowledgedFake?: boolean;
 };
 
 function str(value: unknown, max: number): string {
