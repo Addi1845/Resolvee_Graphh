@@ -206,10 +206,11 @@ export const en = {
       denied: "Location permission was refused. You can still submit using the address above.",
       unsupported: "This device or browser cannot share a location. The address above is enough.",
       safety: "Never put yourself in danger to collect a location or a photo.",
-      mapTitle: "Mark the exact spot in Nashik",
-      mapHelp: "This is a live street map of Nashik. Tap or click where the problem was reported.",
-      pinRequired: "Please mark the complaint location on the Nashik map.",
-      pinSelected: "Nashik map pin selected: {lat}, {lng}",
+      mapTitle: "Your detected location in Nashik",
+      mapHelp:
+        "This live map only shows your location. The pin is placed automatically from your phone's GPS when you use “Use my current location” — it cannot be moved by hand, so a complaint cannot be filed from somewhere else.",
+      pinRequired: "Please use “Use my current location” below so we can detect where you are.",
+      pinSelected: "Location detected from your device: {lat}, {lng}",
       outsideNashik: "This portal currently accepts locations within Nashik only.",
       states: {
         unavailable: "Device location not shared",

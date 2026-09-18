@@ -1,30 +1,26 @@
-import { CircleMarker, MapContainer, TileLayer, useMapEvents } from "react-leaflet";
+import { useEffect } from "react";
+import { CircleMarker, MapContainer, TileLayer, useMap } from "react-leaflet";
 
 import "leaflet/dist/leaflet.css";
 
-import { NASHIK_CENTER, NASHIK_MAP_BOUNDS, isInNashik } from "@/lib/policy";
+import { NASHIK_CENTER, NASHIK_MAP_BOUNDS } from "@/lib/policy";
 
-function MapClickHandler({
-  onPick,
-}: {
-  onPick: (point: { lat: number; lng: number }) => void;
-}) {
-  useMapEvents({
-    click(event) {
-      const point = { lat: event.latlng.lat, lng: event.latlng.lng };
-      if (isInNashik(point)) onPick(point);
-    },
-  });
+function RecenterOnPin({ point }: { point: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (point) map.setView([point.lat, point.lng], Math.max(map.getZoom(), 15));
+  }, [map, point]);
   return null;
 }
 
-/** A real OpenStreetMap picker constrained to the Nashik service area. */
+/**
+ * View-only map of the Nashik service area. The pin is placed only from the
+ * citizen's device GPS — it cannot be clicked or dragged to another spot.
+ */
 export default function NashikLocationPicker({
   value,
-  onChange,
 }: {
   value: { lat: number; lng: number } | null;
-  onChange: (point: { lat: number; lng: number }) => void;
 }) {
   return (
     <div className="h-80 overflow-hidden rounded-sm border border-border-strong">
@@ -41,7 +37,7 @@ export default function NashikLocationPicker({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapClickHandler onPick={onChange} />
+        <RecenterOnPin point={value} />
         {value ? (
           <CircleMarker
             center={[value.lat, value.lng]}
