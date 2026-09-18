@@ -333,6 +333,11 @@ export const en = {
       methodRule: "Demo / rule-based analysis — no live model was available.",
       reviewNote:
         "This is a recommendation. An officer confirms or corrects the routing before work starts.",
+      observedTitle: "What the assistant observed in your report",
+      evidenceTitle: "Evidence it relied on",
+      hazardsTitle: "Hazards noticed",
+      severityTitle: "Severity",
+      severities: { low: "Low", medium: "Medium", high: "High" },
     },
     voice: {
       start: "Speak instead of typing",
