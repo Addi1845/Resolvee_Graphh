@@ -6,7 +6,7 @@ import { ArrowLeft, Copy, Printer } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
 import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
-import { getComplaintDetail } from "@/lib/complaints.functions";
+import { getComplaintDetail, getMyAccess, updateComplaintStatus } from "@/lib/complaints.functions";
 
 export const Route = createFileRoute("/_authenticated/complaints/$code")({
   head: () => ({
@@ -36,10 +36,15 @@ function ComplaintReportPage() {
   const { code } = Route.useParams();
   const { t, locale, formatDate } = useI18n();
   const fetchDetail = useServerFn(getComplaintDetail);
+  const fetchAccess = useServerFn(getMyAccess);
+  const saveStatus = useServerFn(updateComplaintStatus);
 
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [canUpdate, setCanUpdate] = useState(false);
+  const [savingStage, setSavingStage] = useState<string | null>(null);
+  const [stageMessage, setStageMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +60,36 @@ function ComplaintReportPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchAccess({ data: undefined })
+      .then((access) => {
+        if (active) setCanUpdate(Boolean(access?.canUpdate));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [fetchAccess]);
+
+  const changeStage = useCallback(
+    async (complaintId: string, stage: string) => {
+      setSavingStage(stage);
+      setStageMessage(null);
+      try {
+        await saveStatus({ data: { id: complaintId, status: stage } });
+        await load();
+        setStageMessage(t("app.graph.saved"));
+      } catch {
+        setStageMessage(t("app.graph.saveFailed"));
+      } finally {
+        setSavingStage(null);
+      }
+    },
+    [saveStatus, load, t],
+  );
+
 
   function departmentName(dept: DeptRow) {
     if (!dept) return "—";
@@ -176,7 +211,14 @@ function ComplaintReportPage() {
             </dl>
           </section>
 
-          <ResolutionGraph status={complaint.status} reachedStatuses={reached} />
+          <ResolutionGraph
+            status={complaint.status}
+            reachedStatuses={reached}
+            canEdit={canUpdate}
+            savingStage={savingStage}
+            message={stageMessage}
+            onSelect={(stage) => void changeStage(complaint.id, stage)}
+          />
 
           <section className="rounded-sm border border-border bg-surface p-5 shadow-card">
             <h2 className="text-xl font-bold text-primary">{t("app.triage.departments")}</h2>
