@@ -437,6 +437,7 @@ export const submitComplaint = createServerFn({ method: "POST" })
       issueLng,
       device,
       photos,
+      acknowledgedFake: input.acknowledgedFake === true,
     };
   })
   .handler(async ({ data }) => {
