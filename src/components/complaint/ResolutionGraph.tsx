@@ -61,21 +61,22 @@ export function ResolutionGraph({
           : t("app.graph.progress", { percent: String(percent) })}
       </p>
 
+      {canEdit ? (
+        <p className="mt-3 text-sm font-semibold text-secondary">{t("app.graph.editHint")}</p>
+      ) : null}
+
       <ol className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {STAGES.map((stage, index) => {
           const isDone = !rejected && (index < currentIndex || status === "resolved");
           const isCurrent = !rejected && index === currentIndex && status !== "resolved";
-          return (
-            <li
-              key={stage}
-              className={`flex items-start gap-3 rounded-sm border p-3 ${
-                isCurrent
-                  ? "border-secondary bg-info-soft"
-                  : isDone
-                    ? "border-success/40 bg-success-soft"
-                    : "border-border bg-muted/30"
-              }`}
-            >
+          const isSaving = savingStage === stage;
+          const tone = isCurrent
+            ? "border-secondary bg-info-soft"
+            : isDone
+              ? "border-success/40 bg-success-soft"
+              : "border-border bg-muted/30";
+          const body = (
+            <>
               <span className="mt-0.5">
                 {rejected ? (
                   <XCircle aria-hidden="true" className="size-5 text-destructive" />
@@ -87,22 +88,50 @@ export function ResolutionGraph({
                   <Circle aria-hidden="true" className="size-5 text-muted-foreground" />
                 )}
               </span>
-              <span>
+              <span className="text-left">
                 <span className="block text-base font-semibold text-foreground">
                   {t(`app.statuses.${stage}`)}
                 </span>
                 <span className="block text-sm text-muted-foreground">
-                  {isDone
-                    ? t("app.graph.done")
-                    : isCurrent
-                      ? t("app.graph.current")
-                      : t("app.graph.pending")}
+                  {isSaving
+                    ? t("app.graph.saving")
+                    : isDone
+                      ? t("app.graph.done")
+                      : isCurrent
+                        ? t("app.graph.current")
+                        : canEdit
+                          ? t("app.graph.setStage")
+                          : t("app.graph.pending")}
                 </span>
               </span>
+            </>
+          );
+
+          return (
+            <li key={stage}>
+              {canEdit && onSelect ? (
+                <button
+                  type="button"
+                  onClick={() => onSelect(stage)}
+                  disabled={savingStage !== null || isCurrent}
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={`flex w-full items-start gap-3 rounded-sm border p-3 text-left transition-colors ${tone} ${
+                    isCurrent
+                      ? "cursor-default"
+                      : "cursor-pointer hover:border-secondary hover:bg-info-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+                  } ${savingStage !== null && !isSaving ? "opacity-60" : ""}`}
+                >
+                  {body}
+                </button>
+              ) : (
+                <span className={`flex items-start gap-3 rounded-sm border p-3 ${tone}`}>{body}</span>
+              )}
             </li>
           );
         })}
       </ol>
+
+      {message ? <p className="mt-4 text-sm font-semibold text-foreground">{message}</p> : null}
     </section>
   );
 }
