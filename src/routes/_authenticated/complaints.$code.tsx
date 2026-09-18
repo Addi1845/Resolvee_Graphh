@@ -61,6 +61,36 @@ function ComplaintReportPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    let active = true;
+    void fetchAccess({ data: undefined })
+      .then((access) => {
+        if (active) setCanUpdate(Boolean(access?.canUpdate));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [fetchAccess]);
+
+  const changeStage = useCallback(
+    async (complaintId: string, stage: string) => {
+      setSavingStage(stage);
+      setStageMessage(null);
+      try {
+        await saveStatus({ data: { id: complaintId, status: stage } });
+        await load();
+        setStageMessage(t("app.graph.saved"));
+      } catch {
+        setStageMessage(t("app.graph.saveFailed"));
+      } finally {
+        setSavingStage(null);
+      }
+    },
+    [saveStatus, load, t],
+  );
+
+
   function departmentName(dept: DeptRow) {
     if (!dept) return "—";
     return locale === "hi" ? dept.name_hi : locale === "mr" ? dept.name_mr : dept.name_en;
