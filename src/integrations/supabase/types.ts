@@ -251,7 +251,11 @@ export type Database = {
           device_lng: number | null
           device_observed_at: string | null
           due_date: string | null
+          duplicate_suspect: boolean
           id: string
+          integrity_acknowledged: boolean
+          integrity_flag: string
+          integrity_reasons: Json
           issue_lat: number | null
           issue_lng: number | null
           landmark: string | null
@@ -291,7 +295,11 @@ export type Database = {
           device_lng?: number | null
           device_observed_at?: string | null
           due_date?: string | null
+          duplicate_suspect?: boolean
           id?: string
+          integrity_acknowledged?: boolean
+          integrity_flag?: string
+          integrity_reasons?: Json
           issue_lat?: number | null
           issue_lng?: number | null
           landmark?: string | null
@@ -331,7 +339,11 @@ export type Database = {
           device_lng?: number | null
           device_observed_at?: string | null
           due_date?: string | null
+          duplicate_suspect?: boolean
           id?: string
+          integrity_acknowledged?: boolean
+          integrity_flag?: string
+          integrity_reasons?: Json
           issue_lat?: number | null
           issue_lng?: number | null
           landmark?: string | null
