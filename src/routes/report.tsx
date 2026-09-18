@@ -229,6 +229,10 @@ function ReportPage() {
         method: response.analysisMethod,
         needsReview: response.needsReview,
         departments: response.departments,
+        integrityFlag:
+          "integrityFlag" in response ? (response.integrityFlag as string) : "none",
+        duplicateSuspect:
+          "duplicateSuspect" in response ? (response.duplicateSuspect as boolean) : false,
       });
       window.localStorage.removeItem(DRAFT_KEY);
     } catch (submitError) {
