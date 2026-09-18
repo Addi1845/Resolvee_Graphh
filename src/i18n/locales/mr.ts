@@ -421,6 +421,8 @@ export const mr: Dictionary = {
       error: "साइन इन अयशस्वी. ईमेल व पासवर्ड तपासा.",
       signOut: "साइन आउट",
       dashboard: "डॅशबोर्ड",
+      staffNoReport: "तुम्ही अधिकारी म्हणून साइन इन आहात. तक्रार नोंदवणे नागरिकांसाठी आहे.",
+      goToDashboard: "अधिकारी डॅशबोर्डवर जा",
     },
     dashboard: {
       title: "तक्रार डॅशबोर्ड",

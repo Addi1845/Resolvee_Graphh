@@ -14,6 +14,7 @@ import {
 
 import { Reveal } from "@/components/ui/reveal";
 import { useI18n } from "@/i18n";
+import { useStaffAccess } from "@/hooks/useStaffAccess";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,6 +40,7 @@ const METHOD_ICONS = [FileText, Mic, Camera, MapPin];
 
 function Index() {
   const { t, dict } = useI18n();
+  const { isStaff } = useStaffAccess();
 
   return (
     <>
@@ -53,13 +55,23 @@ function Index() {
               {dict.home.hero.text}
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to="/report"
-                className="inline-flex min-h-13 items-center justify-center gap-2 rounded-sm bg-secondary px-6 text-base font-semibold text-secondary-foreground shadow-card transition-colors hover:bg-primary"
-              >
-                <FileText aria-hidden="true" className="size-5" />
-                {dict.home.hero.report}
-              </Link>
+              {isStaff ? (
+                <Link
+                  to="/dashboard"
+                  className="inline-flex min-h-13 items-center justify-center gap-2 rounded-sm bg-secondary px-6 text-base font-semibold text-secondary-foreground shadow-card transition-colors hover:bg-primary"
+                >
+                  <FileText aria-hidden="true" className="size-5" />
+                  {t("app.auth.staffDashboard")}
+                </Link>
+              ) : (
+                <Link
+                  to="/report"
+                  className="inline-flex min-h-13 items-center justify-center gap-2 rounded-sm bg-secondary px-6 text-base font-semibold text-secondary-foreground shadow-card transition-colors hover:bg-primary"
+                >
+                  <FileText aria-hidden="true" className="size-5" />
+                  {dict.home.hero.report}
+                </Link>
+              )}
               <Link
                 to="/track"
                 className="inline-flex min-h-13 items-center justify-center gap-2 rounded-sm border-2 border-primary px-6 text-base font-semibold text-primary transition-colors hover:bg-accent"

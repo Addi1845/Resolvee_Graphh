@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { LayoutDashboard, LogIn, LogOut, Menu, X } from "lucide-react";
@@ -8,11 +8,11 @@ import logoUrl from "@/assets/resolvegraph-logo.png";
 import { AccessibilityControls } from "./AccessibilityControls";
 import { LanguageSelector } from "./LanguageSelector";
 import { useI18n } from "@/i18n";
-import { useSession } from "@/hooks/useSession";
+import { useStaffAccess } from "@/hooks/useStaffAccess";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyAccess } from "@/lib/complaints.functions";
 
-const NAV_ITEMS = [
+// Citizens and visitors get the reporting journey; officials get the work queue.
+const CITIZEN_NAV = [
   { to: "/", key: "nav.home" },
   { to: "/report", key: "nav.report" },
   { to: "/track", key: "nav.track" },
@@ -20,32 +20,23 @@ const NAV_ITEMS = [
   { to: "/help", key: "nav.help" },
 ] as const;
 
+const STAFF_NAV = [
+  { to: "/", key: "nav.home" },
+  { to: "/dashboard", key: "app.auth.staffDashboard" },
+  { to: "/track", key: "nav.track" },
+  { to: "/help", key: "nav.help" },
+] as const;
+
 export function SiteHeader() {
   const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { session } = useSession();
+  const { session, isStaff } = useStaffAccess();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [isStaff, setIsStaff] = useState(false);
-
-  // Only officials get the official dashboard link.
-  useEffect(() => {
-    if (!session) {
-      setIsStaff(false);
-      return;
-    }
-    let active = true;
-    void getMyAccess({ data: undefined })
-      .then((result) => active && setIsStaff(result.isStaff))
-      .catch(() => active && setIsStaff(false));
-    return () => {
-      active = false;
-    };
-  }, [session]);
+  const navItems = isStaff ? STAFF_NAV : CITIZEN_NAV;
 
   async function handleSignOut() {
     setMenuOpen(false);
-    setIsStaff(false);
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
@@ -82,12 +73,14 @@ export function SiteHeader() {
           </div>
           {session ? (
             <>
+              {!isStaff ? (
               <Link
                 to="/my-complaints"
                 className="hidden min-h-11 items-center gap-2 rounded-sm border border-primary-foreground/40 px-4 text-sm font-semibold transition-colors hover:bg-primary-foreground/10 md:inline-flex"
               >
                 {t("app.auth.myDashboard")}
               </Link>
+              ) : null}
               {isStaff ? (
               <Link
                 to="/dashboard"
@@ -139,7 +132,7 @@ export function SiteHeader() {
         className={`border-t border-primary-foreground/15 bg-primary ${menuOpen ? "block" : "hidden"} lg:block`}
       >
         <ul className="mx-auto flex max-w-7xl flex-col px-4 lg:flex-row lg:gap-1 lg:px-2">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <li key={item.to}>
               <Link
                 to={item.to}
@@ -165,6 +158,7 @@ export function SiteHeader() {
           <li className="md:hidden">
             {session ? (
               <div className="flex flex-col">
+                {!isStaff ? (
                 <Link
                   to="/my-complaints"
                   onClick={() => setMenuOpen(false)}
@@ -172,6 +166,7 @@ export function SiteHeader() {
                 >
                   {t("app.auth.myDashboard")}
                 </Link>
+                ) : null}
                 {isStaff ? (
                 <Link
                   to="/dashboard"

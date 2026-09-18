@@ -419,6 +419,8 @@ export const en = {
       error: "Sign-in failed. Check your email and password.",
       signOut: "Sign out",
       dashboard: "Dashboard",
+      staffNoReport: "You are signed in as an official. Reporting a complaint is for citizens.",
+      goToDashboard: "Go to the official dashboard",
     },
     dashboard: {
       title: "Complaint dashboard",

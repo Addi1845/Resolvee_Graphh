@@ -10,6 +10,7 @@ import { VoiceInput } from "@/components/report/VoiceInput";
 import { AiAnalysisStatus } from "@/components/report/AiAnalysisStatus";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
+import { useStaffAccess } from "@/hooks/useStaffAccess";
 
 export const Route = createFileRoute("/report")({
   head: () => ({
@@ -59,6 +60,7 @@ const emptyDraft: Draft = {
 function ReportPage() {
   const { t, locale } = useI18n();
   const submit = useServerFn(submitComplaint);
+  const { isStaff } = useStaffAccess();
 
   const [step, setStep] = useState<Step>("describe");
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -176,6 +178,26 @@ function ReportPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Officials work complaints, they do not file them.
+  if (isStaff) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-14">
+        <div className="rounded-sm border border-border bg-surface p-6 shadow-card">
+          <h1 className="text-2xl font-bold text-primary">{t("app.auth.staffDashboard")}</h1>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("app.auth.staffNoReport")}
+          </p>
+          <Link
+            to="/dashboard"
+            className="mt-6 inline-flex min-h-12 items-center rounded-sm bg-secondary px-5 text-base font-semibold text-secondary-foreground hover:bg-primary"
+          >
+            {t("app.auth.goToDashboard")}
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   if (!ready) {
