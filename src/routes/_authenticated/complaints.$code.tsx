@@ -36,10 +36,15 @@ function ComplaintReportPage() {
   const { code } = Route.useParams();
   const { t, locale, formatDate } = useI18n();
   const fetchDetail = useServerFn(getComplaintDetail);
+  const fetchAccess = useServerFn(getMyAccess);
+  const saveStatus = useServerFn(updateComplaintStatus);
 
   const [data, setData] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [canUpdate, setCanUpdate] = useState(false);
+  const [savingStage, setSavingStage] = useState<string | null>(null);
+  const [stageMessage, setStageMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
