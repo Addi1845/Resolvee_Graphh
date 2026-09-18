@@ -560,7 +560,157 @@ function ReportPage() {
                 </div>
               ))}
             </dl>
+
+            <section className="rounded-sm border border-border bg-surface p-5">
+              <h3 className="text-base font-bold text-primary">{t("app.precheck.title")}</h3>
+
+              {precheckBusy ? (
+                <p
+                  role="status"
+                  className="mt-3 flex items-center gap-2 text-sm text-muted-foreground"
+                >
+                  <Loader2 aria-hidden="true" className="size-4 animate-spin text-primary" />
+                  {t("app.precheck.running")}
+                </p>
+              ) : precheckFailed ? (
+                <div className="mt-3">
+                  <p className="text-sm text-muted-foreground">{t("app.precheck.failed")}</p>
+                  <button
+                    type="button"
+                    onClick={() => void runPrecheck()}
+                    className="mt-2 inline-flex min-h-10 items-center rounded-sm border border-border-strong px-4 text-sm font-semibold text-foreground hover:bg-muted"
+                  >
+                    {t("app.precheck.rerun")}
+                  </button>
+                </div>
+              ) : precheck ? (
+                <div className="mt-3 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    {precheck.method === "ai_vision"
+                      ? t("app.triage.methodAi")
+                      : t("app.triage.methodRule")}
+                  </p>
+                  <p className="text-base text-foreground">
+                    <span className="font-semibold">{t("app.precheck.detected")}: </span>
+                    {t(`app.categories.${precheck.category}`)}
+                  </p>
+                  {precheck.summary ? (
+                    <p className="text-sm text-foreground">
+                      <span className="font-semibold">{t("app.precheck.summary")}: </span>
+                      {precheck.summary}
+                    </p>
+                  ) : null}
+
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {t("app.precheck.duplicatesTitle")}
+                    </p>
+                    {precheck.duplicates.length === 0 ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {t("app.precheck.duplicatesNone")}
+                      </p>
+                    ) : (
+                      <>
+                        <ul className="mt-2 space-y-2">
+                          {precheck.duplicates.map((item) => (
+                            <li
+                              key={item.id}
+                              className="rounded-sm border border-info/40 bg-info-soft px-3 py-2 text-sm text-foreground"
+                            >
+                              <span className="font-semibold">{item.trackingCode}</span> ·{" "}
+                              {item.title}
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {t("app.precheck.duplicateMatch")}:{" "}
+                                {Math.round(item.score * 100)}%
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {t("app.precheck.duplicateNote")}
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {precheck.suspectedFake ? (
+                    <div className="rounded-sm border border-warning/40 bg-warning-soft px-4 py-3">
+                      <p className="flex items-center gap-2 text-sm font-bold text-warning-foreground">
+                        <AlertTriangle aria-hidden="true" className="size-4" />
+                        {t("app.precheck.fakeTitle")}
+                      </p>
+                      {precheck.fakeReasons.length > 0 ? (
+                        <>
+                          <p className="mt-2 text-xs font-semibold text-warning-foreground">
+                            {t("app.precheck.fakeReasons")}
+                          </p>
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm text-foreground">
+                            {precheck.fakeReasons.map((reason) => (
+                              <li key={reason}>{reason}</li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : null}
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t("app.precheck.fakeHint")}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-success-foreground">{t("app.precheck.clean")}</p>
+                  )}
+                </div>
+              ) : null}
+            </section>
           </>
+        ) : null}
+
+        {confirmFake ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fake-confirm-title"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 px-4"
+          >
+            <div className="w-full max-w-md rounded-sm border border-border bg-surface p-6 shadow-card">
+              <h2
+                id="fake-confirm-title"
+                className="flex items-center gap-2 text-lg font-bold text-warning-foreground"
+              >
+                <AlertTriangle aria-hidden="true" className="size-5" />
+                {t("app.precheck.fakeTitle")}
+              </h2>
+              <p className="mt-3 text-base leading-relaxed text-foreground">
+                {t("app.precheck.confirmBody")}
+              </p>
+              {precheck?.fakeReasons.length ? (
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {precheck.fakeReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <p className="mt-3 text-sm text-muted-foreground">{t("app.precheck.filedFake")}</p>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmFake(false);
+                    setStep("attach");
+                  }}
+                  className="inline-flex min-h-12 items-center rounded-sm border border-border-strong px-5 text-base font-semibold text-foreground hover:bg-muted"
+                >
+                  {t("app.precheck.confirmCancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit(true)}
+                  className="inline-flex min-h-12 items-center rounded-sm bg-primary px-5 text-base font-semibold text-primary-foreground hover:bg-secondary"
+                >
+                  {t("app.precheck.confirmProceed")}
+                </button>
+              </div>
+            </div>
+          </div>
         ) : null}
 
         {error ? (
