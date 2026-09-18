@@ -598,7 +598,17 @@ export const submitComplaint = createServerFn({ method: "POST" })
           lng: data.issueLng,
         });
 
+        if (duplicates.length > 0) {
+          await supabaseAdmin
+            .from("complaints")
+            .update({ duplicate_suspect: true })
+            .eq("id", row.id);
+        }
+
         return {
+          integrityFlag: triage.authenticityConcern ? "suspected_fake" : "none",
+          integrityReasons: triage.authenticityReasons,
+          duplicateSuspect: duplicates.length > 0,
           duplicateSuggestions: duplicates,
           trackingCode: row.tracking_code,
           createdAt: row.created_at,
