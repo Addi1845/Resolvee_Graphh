@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, ChevronLeft, ChevronRight, Send } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Loader2,
+  Send,
+  ShieldAlert,
+} from "lucide-react";
 
 import { useI18n } from "@/i18n";
 import { LocationStep, type LocationDraft } from "@/components/report/LocationStep";
@@ -9,7 +18,7 @@ import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
 import { VoiceInput } from "@/components/report/VoiceInput";
 import { AiAnalysisStatus } from "@/components/report/AiAnalysisStatus";
 import { NashikGate } from "@/components/report/NashikGate";
-import { submitComplaint } from "@/lib/complaints.functions";
+import { precheckComplaint, submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 import { useStaffAccess } from "@/hooks/useStaffAccess";
 
