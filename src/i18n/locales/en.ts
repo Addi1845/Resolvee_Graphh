@@ -487,6 +487,11 @@ export const en = {
       why: "Why these were grouped",
     },
     graph: {
+      editHint: "Click a stage to update this complaint. The citizen sees the change on their tracking page.",
+      setStage: "Click to set this stage",
+      saving: "Updating…",
+      saved: "Stage updated. The citizen can now see it on the tracking page.",
+      saveFailed: "Could not update the stage. Please try again.",
       title: "Resolution graph",
       note: "Stages recorded for this complaint.",
       progress: "{percent}% of the stages recorded so far",
