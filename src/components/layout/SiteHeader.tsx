@@ -12,11 +12,19 @@ import { useSession } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyAccess } from "@/lib/complaints.functions";
 
-const NAV_ITEMS = [
+// Citizens and visitors get the reporting journey; officials get the work queue.
+const CITIZEN_NAV = [
   { to: "/", key: "nav.home" },
   { to: "/report", key: "nav.report" },
   { to: "/track", key: "nav.track" },
   { to: "/how-it-works", key: "nav.howItWorks" },
+  { to: "/help", key: "nav.help" },
+] as const;
+
+const STAFF_NAV = [
+  { to: "/", key: "nav.home" },
+  { to: "/dashboard", key: "app.auth.staffDashboard" },
+  { to: "/track", key: "nav.track" },
   { to: "/help", key: "nav.help" },
 ] as const;
 
