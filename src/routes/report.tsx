@@ -8,6 +8,7 @@ import { LocationStep, type LocationDraft } from "@/components/report/LocationSt
 import { PhotoPicker, type DraftPhoto } from "@/components/report/PhotoPicker";
 import { VoiceInput } from "@/components/report/VoiceInput";
 import { AiAnalysisStatus } from "@/components/report/AiAnalysisStatus";
+import { NashikGate } from "@/components/report/NashikGate";
 import { submitComplaint } from "@/lib/complaints.functions";
 import { MEDIA_POLICY } from "@/lib/policy";
 import { useStaffAccess } from "@/hooks/useStaffAccess";
@@ -66,6 +67,7 @@ function ReportPage() {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [photos, setPhotos] = useState<DraftPhoto[]>([]);
   const [ready, setReady] = useState(false);
+  const [gatePassed, setGatePassed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{
