@@ -7,6 +7,7 @@ import { useI18n } from "@/i18n";
 import { ComplaintLocation } from "@/components/complaint/ComplaintLocation";
 import { ResolutionGraph } from "@/components/complaint/ResolutionGraph";
 import { DuplicateClusterPanel, type Cluster } from "@/components/dashboard/DuplicateClusterPanel";
+import { FlaggedPanel } from "@/components/dashboard/FlaggedPanel";
 import { WorkloadChart } from "@/components/dashboard/WorkloadChart";
 import {
   CATEGORIES,
@@ -353,6 +354,12 @@ function DashboardPage() {
                 : []),
             ]}
           />
+        </div>
+      ) : null}
+
+      {isStaff ? (
+        <div className="mt-8">
+          <FlaggedPanel canClear={access?.canUpdate ?? false} />
         </div>
       ) : null}
 
